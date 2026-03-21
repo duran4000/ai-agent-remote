@@ -1,3 +1,5 @@
+import { getCurrentLang, setLang, applyTranslations, t } from './i18n.js';
+
 class AdminApp {
   constructor() {
     this.agents = [];
@@ -7,10 +9,32 @@ class AdminApp {
   }
 
   async init() {
+    this.initLanguage();
     this.bindElements();
     this.bindEvents();
     await this.loadConfig();
     await this.loadAgents();
+  }
+
+  initLanguage() {
+    const lang = getCurrentLang();
+    applyTranslations(lang);
+    this.updateLangButton(lang);
+  }
+
+  toggleLanguage() {
+    const currentLang = getCurrentLang();
+    const newLang = currentLang === 'zh' ? 'en' : 'zh';
+    setLang(newLang);
+    this.updateLangButton(newLang);
+    this.renderAgents();
+  }
+
+  updateLangButton(lang) {
+    const langSwitch = document.getElementById('lang-switch');
+    if (langSwitch) {
+      langSwitch.textContent = lang === 'zh' ? 'EN' : '中文';
+    }
   }
 
   bindElements() {
@@ -36,6 +60,7 @@ class AdminApp {
     this.maxHistory = document.getElementById('max-history');
     this.sessionTimeout = document.getElementById('session-timeout');
     this.toast = document.getElementById('toast');
+    this.langSwitch = document.getElementById('lang-switch');
   }
 
   bindEvents() {
@@ -61,6 +86,10 @@ class AdminApp {
     this.togglePasswordBtn.addEventListener('click', () => {
       this.authPassword.type = this.authPassword.type === 'password' ? 'text' : 'password';
     });
+
+    if (this.langSwitch) {
+      this.langSwitch.addEventListener('click', () => this.toggleLanguage());
+    }
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !this.modal.classList.contains('hidden')) {
@@ -88,7 +117,7 @@ class AdminApp {
         this.renderSessionConfig();
       }
     } catch (error) {
-      this.showToast('加载配置失败', 'error');
+      this.showToast(t('admin.error.loadConfig'), 'error');
     }
   }
 
@@ -116,20 +145,26 @@ class AdminApp {
         this.renderAgents();
       }
     } catch (error) {
-      this.showToast('加载 AI Agents 失败', 'error');
+      this.showToast(t('admin.error.loadAgents'), 'error');
     }
   }
 
   renderAgents() {
+    const lang = getCurrentLang();
+    const builtinText = lang === 'zh' ? '内置' : 'Built-in';
+    const customText = lang === 'zh' ? '自定义' : 'Custom';
+    const editText = lang === 'zh' ? '编辑' : 'Edit';
+    const deleteText = lang === 'zh' ? '删除' : 'Delete';
+
     this.agentsList.innerHTML = this.agents.map(agent => `
       <div class="agent-item" data-key="${agent.key}">
         <div class="agent-name">
           ${agent.name}
-          <span class="agent-badge ${agent.isPreset ? 'preset' : 'custom'}">${agent.isPreset ? '预设' : '自定义'}</span>
+          <span class="agent-badge ${agent.isPreset ? 'preset' : 'custom'}">${agent.isPreset ? builtinText : customText}</span>
         </div>
         <div class="agent-actions">
-          <button class="edit-btn" data-key="${agent.key}">编辑</button>
-          ${!agent.isPreset ? `<button class="delete-btn" data-key="${agent.key}" data-name="${agent.name}">删除</button>` : ''}
+          <button class="edit-btn" data-key="${agent.key}">${editText}</button>
+          ${!agent.isPreset ? `<button class="delete-btn" data-key="${agent.key}" data-name="${agent.name}">${deleteText}</button>` : ''}
         </div>
       </div>
     `).join('');
@@ -152,7 +187,7 @@ class AdminApp {
 
   openAddModal() {
     this.editingKey = null;
-    this.modalTitle.textContent = '添加 AI Agent';
+    this.modalTitle.textContent = t('admin.modal.add');
     this.agentNameInput.value = '';
     this.agentCommandInput.value = '';
     this.agentPathInput.value = '';
@@ -162,7 +197,7 @@ class AdminApp {
 
   openEditModal(agent) {
     this.editingKey = agent.key;
-    this.modalTitle.textContent = '编辑 AI Agent';
+    this.modalTitle.textContent = t('admin.modal.edit');
     this.agentNameInput.value = agent.name;
     this.agentCommandInput.value = agent.command;
     this.agentPathInput.value = agent.fallbackPath || '';
@@ -181,7 +216,8 @@ class AdminApp {
     const fallbackPath = this.agentPathInput.value.trim();
 
     if (!name || !command) {
-      this.showToast('名称和命令不能为空', 'error');
+      const lang = getCurrentLang();
+      this.showToast(lang === 'zh' ? '名称和命令不能为空' : 'Name and command are required', 'error');
       return;
     }
 
@@ -204,21 +240,24 @@ class AdminApp {
       }
 
       const data = await res.json();
+      const lang = getCurrentLang();
 
       if (data.success) {
-        this.showToast(this.editingKey ? '更新成功' : '添加成功', 'success');
+        this.showToast(lang === 'zh' ? (this.editingKey ? '更新成功' : '添加成功') : (this.editingKey ? 'Updated' : 'Added'), 'success');
         this.closeModal();
         await this.loadAgents();
       } else {
-        this.showToast('保存失败: ' + data.error, 'error');
+        this.showToast((lang === 'zh' ? '保存失败: ' : 'Save failed: ') + data.error, 'error');
       }
     } catch (error) {
-      this.showToast('保存失败: ' + error.message, 'error');
+      const lang = getCurrentLang();
+      this.showToast((lang === 'zh' ? '保存失败: ' : 'Save failed: ') + error.message, 'error');
     }
   }
 
   async deleteAgent(key, name) {
-    if (!confirm(`确定要删除 "${name}" 吗？`)) {
+    const lang = getCurrentLang();
+    if (!confirm(lang === 'zh' ? `确定要删除 "${name}" 吗？` : `Delete "${name}"?`)) {
       return;
     }
 
@@ -227,13 +266,14 @@ class AdminApp {
       const data = await res.json();
 
       if (data.success) {
-        this.showToast('删除成功', 'success');
+        this.showToast(lang === 'zh' ? '删除成功' : 'Deleted', 'success');
         await this.loadAgents();
       } else {
-        this.showToast('删除失败: ' + data.error, 'error');
+        this.showToast((lang === 'zh' ? '删除失败: ' : 'Delete failed: ') + data.error, 'error');
       }
     } catch (error) {
-      this.showToast('删除失败: ' + error.message, 'error');
+      const lang = getCurrentLang();
+      this.showToast((lang === 'zh' ? '删除失败: ' : 'Delete failed: ') + error.message, 'error');
     }
   }
 
