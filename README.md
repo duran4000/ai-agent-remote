@@ -25,10 +25,11 @@ notepad config.json
 ./start.bat
 
 # 4. 浏览器访问
-# http://localhost:65436
+# 本机测试: http://localhost:65436
+# 其他设备: http://<本机IP>:65436 （如 http://192.168.1.100:65436）
 ```
 
-> 详细说明请参考 [Windows 安装指南](doc/INSTALL-WINDOWS.md)
+> 查看本机 IP: `ipconfig` (Windows) 或 `ifconfig`/`ip a` (Linux/Mac)
 
 ### Linux / macOS 用户
 
@@ -48,7 +49,8 @@ cd server && node claude-remote-server.js &
 cd client && node session-manager.js
 
 # 5. 浏览器访问
-# http://localhost:65436
+# 本机测试: http://localhost:65436
+# 其他设备: http://<本机IP>:65436
 ```
 
 ## 目录结构
