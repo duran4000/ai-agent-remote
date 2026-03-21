@@ -22,11 +22,11 @@
 
 ```mermaid
 flowchart LR
-    subgraph LAN["局域网 / Local Network"]
+    subgraph LAN["Local Network"]
         direction LR
-        A["📱 手机/平板<br/>Browser"]
-        B["💻 其他电脑<br/>Browser"]
-        C["🖥️ 电脑<br/>Server"]
+        A["📱 Phone/Tablet<br/>Browser"]
+        B["💻 Other PC<br/>Browser"]
+        C["🖥️ Host PC<br/>Server"]
 
         A <-->|"HTTP/WebSocket"| C
         B <-->|"HTTP/WebSocket"| C
