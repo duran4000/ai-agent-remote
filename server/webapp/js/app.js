@@ -401,40 +401,59 @@ class App {
     });
     
     this.elements.addTabBtn.addEventListener('click', () => this.addTab());
-    this.elements.terminalOverlay.addEventListener('click', (e) => {
-      const overlay = this.elements.terminalOverlay;
 
-      // 检查是否点击在圆圈内
-      const unlockCircle = e.target.closest('.unlock-circle');
-      if (!unlockCircle) return;
+    // Setup overlay click listener based on settings
+    this.setupOverlayClickListener();
 
-      // 立即播放涟漪效果
-      this.playRippleEffect(e);
-
-      // 然后执行解锁动画
-      // 如果是断开状态，单击重新连接
-      if (overlay.classList.contains('disconnected')) {
-        this.animateUnlock(() => {
-          this.reconnectTab(this.currentTabId);
-        });
-        return;
-      }
-
-      // 已连接但非激活状态：点亮激活
-      this.animateUnlock(() => {
-        overlay.classList.remove('active');
-        if (this.terminal) {
-          this.terminal.fit(true);
-        }
-        if (this.wsManager && this.wsManager.isConnected) {
-          const deviceType = this.wsManager.deviceType || 'desktop';
-          this.wsManager.sendActive(deviceType);
-
-          // 激活后给当前标签加锁
-          this.lockCurrentTab();
-        }
+    // Listen for overlay click mode changes
+    document.querySelectorAll('input[name="overlay-click-mode"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        this.settings.overlayClickMode = e.target.value;
+        this.setupOverlayClickListener();
+        this.saveSettings();
       });
     });
+  }
+
+  setupOverlayClickListener() {
+    const overlay = this.elements.terminalOverlay;
+    const eventType = this.settings.overlayClickMode || 'dblclick';
+
+    // Remove existing listener
+    overlay.removeEventListener('click', this._overlayClickHandler);
+    overlay.removeEventListener('dblclick', this._overlayClickHandler);
+
+    // Create handler if not exists
+    if (!this._overlayClickHandler) {
+      this._overlayClickHandler = (e) => {
+        const unlockCircle = e.target.closest('.unlock-circle');
+        if (!unlockCircle) return;
+
+        this.playRippleEffect(e);
+
+        if (overlay.classList.contains('disconnected')) {
+          this.animateUnlock(() => {
+            this.reconnectTab(this.currentTabId);
+          });
+          return;
+        }
+
+        this.animateUnlock(() => {
+          overlay.classList.remove('active');
+          if (this.terminal) {
+            this.terminal.fit(true);
+          }
+          if (this.wsManager && this.wsManager.isConnected) {
+            const deviceType = this.wsManager.deviceType || 'desktop';
+            this.wsManager.sendActive(deviceType);
+            this.lockCurrentTab();
+          }
+        });
+      };
+    }
+
+    // Add listener with correct event type
+    overlay.addEventListener(eventType, this._overlayClickHandler);
   }
 
   lockCurrentTab() {
@@ -1245,15 +1264,18 @@ class App {
 
   loadSettings() {
     const saved = localStorage.getItem('claude-remote-settings');
-    return saved ? JSON.parse(saved) : { serverUrl: '', token: '', workDir: '', aiAgent: 'claude' };
+    const defaults = { serverUrl: '', token: '', workDir: '', aiAgent: 'claude', overlayClickMode: 'dblclick' };
+    return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
   }
 
   saveSettings() {
+    const overlayMode = document.querySelector('input[name="overlay-click-mode"]:checked');
     this.settings = {
       serverUrl: this.elements.serverUrl.value.trim(),
       token: this.elements.authToken.value.trim(),
       workDir: this.elements.workDir.value.trim(),
-      aiAgent: this.elements.aiAgent.value
+      aiAgent: this.elements.aiAgent.value,
+      overlayClickMode: overlayMode ? overlayMode.value : 'dblclick'
     };
     localStorage.setItem('claude-remote-settings', JSON.stringify(this.settings));
   }
@@ -1263,6 +1285,11 @@ class App {
     this.elements.authToken.value = this.settings.token || '';
     this.elements.workDir.value = this.settings.workDir || '';
     this.elements.aiAgent.value = this.settings.aiAgent || 'claude';
+
+    // Load overlay click mode
+    const overlayMode = this.settings.overlayClickMode || 'dblclick';
+    const radioBtn = document.querySelector(`input[name="overlay-click-mode"][value="${overlayMode}"]`);
+    if (radioBtn) radioBtn.checked = true;
   }
 
   loadWorkDirHistory() {
