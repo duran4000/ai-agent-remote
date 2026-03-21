@@ -14,7 +14,7 @@
 
 ## 前提条件
 
-- 电脑上已安装 AI Agent CLI（如 [Claude Code](https://claude.ai/code)、Qwen、Gemini 等）
+- 电脑上已安装 AI Agent CLI（如 [Claude Code](https://claude.ai/code)、Qwen、Gemini、iFlow、OpenCode 等）
 - **手机/平板等终端需能与 AI Agent CLI 所在的电脑在同一局域网内直接通信**
   - 同一 WiFi 网络
   - 或通过 VPN/Tailscale 等方式可达

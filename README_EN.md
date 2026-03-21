@@ -14,7 +14,7 @@ Control AI Agent CLI (Claude Code, Qwen, Gemini, etc.) on your PC from mobile or
 
 ## Prerequisites
 
-- AI Agent CLI installed on your PC (e.g., [Claude Code](https://claude.ai/code), Qwen, Gemini)
+- AI Agent CLI installed on your PC (e.g., [Claude Code](https://claude.ai/code), Qwen, Gemini, iFlow, OpenCode)
 - **Mobile/Tablet must be able to communicate directly with the PC running AI Agent CLI in the same LAN**
   - Same WiFi network
   - Or accessible via VPN/Tailscale
