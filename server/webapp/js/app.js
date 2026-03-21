@@ -485,59 +485,27 @@ class App {
   }
 
   animateUnlock(callback) {
-    console.log('[动画调试] animateUnlock 被调用', {
-      tabId: this.currentTabId,
-      timestamp: Date.now(),
-      stack: new Error().stack
-    });
-
     const overlay = this.elements.terminalOverlay;
     const unlockCircle = overlay.querySelector('.unlock-circle');
     const wasDisconnected = overlay.classList.contains('disconnected');
     const wasActive = overlay.classList.contains('active');
-    const triggeredTabId = this.currentTabId;  // 记录触发动画时的标签ID
+    const triggeredTabId = this.currentTabId;
 
-    console.log('[动画调试] animateUnlock 状态', {
-      wasDisconnected,
-      wasActive,
-      triggeredTabId
-    });
-
-    // 先让圆圈淡出，涟漪继续播放
     if (unlockCircle) {
-      console.log('[动画调试] 设置圆圈淡出样式');
       unlockCircle.style.transition = 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
       unlockCircle.style.opacity = '0';
       unlockCircle.style.transform = 'scale(1.5)';
     }
 
-    // 涟漪播放完成后执行回调
     setTimeout(() => {
-      console.log('[动画调试] setTimeout 回调执行', {
-        currentTabId: this.currentTabId,
-        triggeredTabId,
-        sameTab: this.currentTabId === triggeredTabId
-      });
-
-      // 如果已经切换到其他标签，不执行任何操作
       if (this.currentTabId !== triggeredTabId) return;
 
       if (callback) callback();
 
-      // 只在状态未改变时（连接失败等）才重置圆圈样式
       const stillDisconnected = overlay.classList.contains('disconnected');
       const stillActive = overlay.classList.contains('active');
 
-      console.log('[动画调试] 检查是否重置样式', {
-        stillDisconnected,
-        stillActive,
-        willReset: stillDisconnected === wasDisconnected && stillActive === wasActive
-      });
-
-      // 只在蒙版仍然显示时重置样式（连接失败的情况）
-      // 连接成功时蒙版已隐藏，不需要重置
       if (unlockCircle && stillDisconnected && !stillActive) {
-        console.log('[动画调试] 重置圆圈样式（callback后）');
         unlockCircle.style.transition = '';
         unlockCircle.style.opacity = '';
         unlockCircle.style.transform = '';
@@ -715,32 +683,12 @@ class App {
               content: item.data?.content || '',
               type: 'default'
             }))
-            .filter(item => {
-              const content = item.content || '';
-              return !content.includes('[远程控制已连接]') && 
-                     !content.includes('已断开连接') &&
-                     !content.includes('连接成功！') &&
-                     !content.includes('工作目录:') &&
-                     !content.includes('AI Agent:') &&
-                     !content.includes('设备ID:') &&
-                     !content.includes('加载') &&
-                     !content.includes('桌面客户端');
-            });
+            .filter(item => !this.shouldFilterContent(item.content || ''));
           this.saveTabs();
           
           message.data.history.forEach(item => {
-            if (item.data?.content) {
-              const content = item.data.content;
-              if (!content.includes('[远程控制已连接]') && 
-                  !content.includes('已断开连接') &&
-                  !content.includes('连接成功！') &&
-                  !content.includes('工作目录:') &&
-                  !content.includes('AI Agent:') &&
-                  !content.includes('设备ID:') &&
-                  !content.includes('加载') &&
-                  !content.includes('桌面客户端')) {
-                this.terminal.write(content);
-              }
+            if (item.data?.content && !this.shouldFilterContent(item.data.content)) {
+              this.terminal.write(item.data.content);
             }
           });
         }
@@ -752,6 +700,21 @@ class App {
       this.updateConnectionUI(false);
       this.terminal.write(`连接失败: ${error.message || '未知错误'}`, 'error');
     }
+  }
+
+  // 内容过滤器 - 过滤掉不需要显示的状态消息
+  shouldFilterContent(content) {
+    const filters = [
+      '[远程控制已连接]',
+      '已断开连接',
+      '连接成功！',
+      '工作目录:',
+      'AI Agent:',
+      '设备ID:',
+      '加载',
+      '桌面客户端'
+    ];
+    return filters.some(pattern => content.includes(pattern));
   }
 
   getCurrentTabIdForWs(wsManager) {
@@ -959,27 +922,15 @@ class App {
   }
 
   updateConnectionUI(connected, connecting = false) {
-    console.log('[动画调试] updateConnectionUI 被调用', {
-      connected,
-      connecting,
-      tabId: this.currentTabId,
-      timestamp: Date.now(),
-      stack: new Error().stack.split('\n').slice(0, 5).join('\n')
-    });
-
     this.elements.sessionStatusDot.className = 'status-dot';
     this.elements.commandInput.disabled = !connected;
 
-    // 管理断开状态蒙版
     const overlay = this.elements.terminalOverlay;
     const overlayText = overlay.querySelector('.overlay-text');
 
     if (connected) {
       overlay.classList.remove('disconnected', 'unlocking');
       this.elements.sessionStatusDot.classList.add('connected');
-      const wsManager = this.wsManager;
-      const mode = wsManager?.connectionMode || 'relay';
-      const modeText = mode === 'direct' ? 'P2P直连' : '中转连接';
       this.elements.sessionStatusText.textContent = '已连接';
       this.elements.sessionStatusText.style.color = '#00ff00';
       this.elements.connectBtn.classList.add('hidden');
@@ -989,19 +940,15 @@ class App {
       this.elements.sessionStatusDot.classList.add('connecting');
       this.elements.sessionStatusText.textContent = '连接中...';
     } else {
-      // 断开状态：先重置样式，再显示蒙版（避免动画残留）
       const unlockCircle = overlay.querySelector('.unlock-circle');
       if (unlockCircle) {
-        console.log('[动画调试] updateConnectionUI 重置圆圈样式（断开状态，在显示蒙版前）');
         unlockCircle.style.transition = 'none';
         unlockCircle.style.opacity = '1';
         unlockCircle.style.transform = 'scale(1)';
-        // 强制重排，确保样式立即应用
         void unlockCircle.offsetWidth;
         unlockCircle.style.transition = '';
       }
 
-      // 现在再显示蒙版（此时圆圈样式已正确）
       overlay.classList.remove('active', 'unlocking');
       overlay.classList.add('disconnected');
       if (overlayText) overlayText.textContent = '已断开';
@@ -1218,21 +1165,13 @@ class App {
 
   loadCurrentTabTerminal() {
     if (!this.currentTabId) return;
-    
+
     const currentTab = this.tabs.find(t => t.id === this.currentTabId);
     if (currentTab && this.terminal) {
       this.terminal.clear();
       if (currentTab.terminalHistory && currentTab.terminalHistory.length > 0) {
         currentTab.terminalHistory.forEach(line => {
-          const content = line.content || '';
-          if (!content.includes('[远程控制已连接]') && 
-              !content.includes('已断开连接') &&
-              !content.includes('连接成功！') &&
-              !content.includes('工作目录:') &&
-              !content.includes('AI Agent:') &&
-              !content.includes('设备ID:') &&
-              !content.includes('加载') &&
-              !content.includes('桌面客户端')) {
+          if (!this.shouldFilterContent(line.content || '')) {
             this.terminal.write(line.content, line.type || 'default');
           }
         });
