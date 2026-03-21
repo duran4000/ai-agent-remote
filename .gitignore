@@ -20,6 +20,11 @@ config.json
 *.lock
 server.lock
 session-manager.lock
+server/server.lock
+client/session-manager.lock
+
+# 运行时数据
+client/sessions.json
 
 # 操作系统
 .DS_Store
