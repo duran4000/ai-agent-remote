@@ -24,7 +24,7 @@
 
 3. 双击运行 `start.bat` 启动服务
 
-4. 浏览器访问 `http://localhost:9527`
+4. 浏览器访问 `http://localhost:41491`
 
 ### 方式二：命令行安装
 
@@ -80,6 +80,6 @@ npm install -g windows-build-tools
 
 检查并结束占用端口的进程：
 ```powershell
-netstat -ano | findstr :9527
+netstat -ano | findstr :41491
 taskkill /PID <进程ID> /F
 ```

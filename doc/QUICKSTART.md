@@ -77,11 +77,11 @@ cd e:\MyCode\python\ai-agent-remote\server
 **预期输出**：
 ```
 [Server] Claude Remote Control Server
-[Server] Running at http://0.0.0.0:9527
-[Server] WebSocket: ws://0.0.0.0:9527
-[Server] Web App: http://0.0.0.0:9527/app
+[Server] Running at http://0.0.0.0:41491
+[Server] WebSocket: ws://0.0.0.0:41491
+[Server] Web App: http://0.0.0.0:41491/app
 [Server] Tailscale IP: 100.64.x.x
-[Server] P2P Access: http://100.64.x.x:9527/app
+[Server] P2P Access: http://100.64.x.x:41491/app
 ```
 
 ### 启动 Session Manager
@@ -103,17 +103,17 @@ cd e:\MyCode\python\ai-agent-remote\client
 
 **P2P 直连模式**（推荐）：
 ```
-http://<桌面端Tailscale IP>:9527/app
+http://<桌面端Tailscale IP>:41491/app
 ```
 
 **局域网模式**（备用）：
 ```
-http://<桌面端局域网IP>:9527/app
+http://<桌面端局域网IP>:41491/app
 ```
 
 ### 配置连接
 
-1. **服务器地址**：`ws://<桌面端Tailscale IP>:9527`
+1. **服务器地址**：`ws://<桌面端Tailscale IP>:41491`
 2. **认证 Token**：`YOUR_AUTH_TOKEN`（在 config.json 中设置）
 3. **工作目录**：如 `E:/MyCode/python/my-project`
 4. **AI Agent**：选择您要使用的 AI 工具（Claude、Qwen、Gemini 等）
@@ -152,7 +152,7 @@ http://<桌面端局域网IP>:9527/app
 
 **解决方案**：
 1. 确认桌面端和手机端都连接到 Tailscale
-2. 检查防火墙是否允许端口 9527
+2. 检查防火墙是否允许端口 41491
 3. 尝试使用局域网 IP 连接
 
 ### Q2: 终端无响应？

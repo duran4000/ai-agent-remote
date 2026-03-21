@@ -34,7 +34,7 @@ flowchart LR
         B <-->|"HTTP/WebSocket"| C
 
         subgraph C["Server Components"]
-            D["Web Server<br/>(port 9527)"]
+            D["Web Server<br/>(port 41491)"]
             E["Session Manager"]
             F["PTY Wrapper"]
             G["AI Agent CLI<br/>(Claude/Qwen/Gemini)"]
@@ -58,8 +58,8 @@ notepad config.json
 ./start.bat
 
 # 4. 浏览器访问
-# 本机测试: http://localhost:9527
-# 其他设备: http://<本机IP>:9527 （如 http://192.168.1.100:9527）
+# 本机测试: http://localhost:41491
+# 其他设备: http://<本机IP>:41491 （如 http://192.168.1.100:41491）
 ```
 
 > 查看本机 IP: `ipconfig` (Windows) 或 `ifconfig`/`ip a` (Linux/Mac)
@@ -82,8 +82,8 @@ cd server && node claude-remote-server.js &
 cd client && node session-manager.js
 
 # 5. 浏览器访问
-# 本机测试: http://localhost:9527
-# 其他设备: http://<本机IP>:9527
+# 本机测试: http://localhost:41491
+# 其他设备: http://<本机IP>:41491
 ```
 
 ## 目录结构
@@ -120,7 +120,7 @@ claude-remote-control/
   },
   "server": {
     "host": "0.0.0.0",
-    "port": 9527,
+    "port": 41491,
     "token": "YOUR_TOKEN_HERE",
     "authPassword": "YOUR_PASSWORD_HERE"
   },
@@ -172,7 +172,7 @@ server {
     server_name your-domain.com;
 
     location / {
-        proxy_pass http://127.0.0.1:9527;
+        proxy_pass http://127.0.0.1:41491;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";

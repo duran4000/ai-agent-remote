@@ -6,7 +6,8 @@ echo Claude Remote Control Server
 echo ========================================
 echo.
 
-set PORT=9527
+REM 从 config.json 读取端口
+for /f "delims=" %%i in ('node -e "try{console.log(require('../config.json').server.port||41491)}catch(e){console.log(41491)}"') do set PORT=%%i
 
 echo [1/3] Checking if port %PORT% is already in use...
 netstat -ano | findstr ":%PORT%" >nul

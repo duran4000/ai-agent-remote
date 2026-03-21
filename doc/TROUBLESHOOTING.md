@@ -312,10 +312,10 @@ const wrapper = spawn(spawnArgs[0], spawnArgs.slice(1), spawnOptions);
 
 ### 10. 端口与配置
 
-**问题**: 端口配置混乱，文档中同时出现 10010 和 9527。
+**问题**: 端口配置混乱，文档中同时出现 10010 和 41491。
 
 **解决方案**:
-- 统一使用端口 9527
+- 统一使用端口 41491
 - 监听地址: 0.0.0.0（允许局域网访问）
 - 统一配置管理: 根目录 config.json
 
@@ -400,14 +400,14 @@ tasklist | findstr "claude-remote"
 
 ```powershell
 # 检查端口监听
-netstat -an | findstr 9527
+netstat -an | findstr 41491
 ```
 
 ### 网络诊断
 
 ```powershell
 # 测试本地连接
-curl http://localhost:9527/api/network-info
+curl http://localhost:41491/api/network-info
 ```
 
 ---

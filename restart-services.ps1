@@ -1,7 +1,15 @@
 $ErrorActionPreference = "Stop"
 
 $PROJECT_DIR = Split-Path -Parent $MyInvocation.MyCommand.Path
-$PORT = 9527
+
+# 从 config.json 读取端口配置
+$ConfigFile = Join-Path $PROJECT_DIR "config.json"
+if (Test-Path $ConfigFile) {
+    $Config = Get-Content $ConfigFile | ConvertFrom-Json
+    $PORT = $Config.server.port
+} else {
+    $PORT = 41491  # 默认端口
+}
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Claude Remote Control - Restart Services" -ForegroundColor Cyan

@@ -18,7 +18,15 @@ $PROJECT_DIR = $SCRIPT_DIR  # Script is in project root, not a subdirectory
 $SERVER_DIR = Join-Path $PROJECT_DIR "server"
 $CLIENT_DIR = Join-Path $PROJECT_DIR "client"
 $LOGS_DIR = Join-Path $PROJECT_DIR "logs"
-$PORT = 9527
+
+# 从 config.json 读取端口配置
+$ConfigFile = Join-Path $PROJECT_DIR "config.json"
+if (Test-Path $ConfigFile) {
+    $Config = Get-Content $ConfigFile | ConvertFrom-Json
+    $PORT = $Config.server.port
+} else {
+    $PORT = 41491  # 默认端口（config.json 不存在时使用）
+}
 
 $SERVER_LOCK_FILE = Join-Path $SERVER_DIR "server.lock"
 $MANAGER_LOCK_FILE = Join-Path $CLIENT_DIR "session-manager.lock"

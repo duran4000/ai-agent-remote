@@ -10,6 +10,14 @@ $CLIENT_DIR = Join-Path $SCRIPT_DIR "client"
 $CONFIG_FILE = Join-Path $SCRIPT_DIR "config.json"
 $CONFIG_EXAMPLE = Join-Path $SCRIPT_DIR "config.example.json"
 
+# 从 config.json 读取端口（如果存在）
+if (Test-Path $CONFIG_FILE) {
+    $Config = Get-Content $CONFIG_FILE | ConvertFrom-Json
+    $PORT = $Config.server.port
+} else {
+    $PORT = 41491  # 默认端口
+}
+
 function Write-Log {
     param([string]$Message, [string]$Color = "White")
     $timestamp = Get-Date -Format "HH:mm:ss"
@@ -99,7 +107,7 @@ Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "  1. Edit config.json (set token and password)" -ForegroundColor White
 Write-Host "  2. Run start.bat to start services" -ForegroundColor White
-Write-Host "  3. Open http://localhost:9527 in browser" -ForegroundColor White
+Write-Host "  3. Open http://localhost:$PORT in browser" -ForegroundColor White
 Write-Host ""
 
 Read-Host "Press Enter to exit"
