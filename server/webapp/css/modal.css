@@ -98,7 +98,8 @@
 .form-group.inline-group label:first-child {
   margin-bottom: 0;
   flex-shrink: 0;
-  line-height: 1.4;
+  font-size: 13px;
+  line-height: 1;
 }
 
 .form-group.inline-group .custom-select {
@@ -197,15 +198,17 @@
 
 /* ====== 复选框 ====== */
 .checkbox-label {
-  display: inline-flex;
+  display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 4px;
   font-size: 13px;
+  line-height: 1;
   color: var(--text-secondary);
   cursor: pointer;
   white-space: nowrap;
-  line-height: 16px;
-  height: 16px;
+  margin: 0;
+  padding: 0;
 }
 
 .checkbox-label input[type="checkbox"] {
@@ -213,8 +216,6 @@
   height: 14px;
   cursor: pointer;
   margin: 0;
-  padding: 0;
-  vertical-align: baseline;
 }
 
 /* ====== 工作目录下拉 ====== */
@@ -291,22 +292,34 @@
 
 /* ====== 蒙版激活模式 ====== */
 .form-group.overlay-mode-group {
-  gap: 10px;
+  display: flex;
+  flex-direction: row;
   align-items: center;
+  gap: 10px;
 }
 
 .form-group.overlay-mode-group > label:first-child {
+  display: flex;
+  align-items: center;
   min-width: 60px;
+  font-size: 13px;
+  line-height: 1;
+  margin: 0;
+  padding: 0;
 }
 
 .radio-label {
-  display: inline-flex;
+  display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 4px;
   font-size: 13px;
+  line-height: 1;
   color: var(--text-secondary);
   cursor: pointer;
   white-space: nowrap;
+  margin: 0;
+  padding: 0;
 }
 
 .radio-label input[type="radio"] {
@@ -314,5 +327,4 @@
   height: 14px;
   cursor: pointer;
   margin: 0;
-  vertical-align: baseline;
 }
