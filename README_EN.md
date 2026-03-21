@@ -34,7 +34,7 @@ flowchart LR
         B <-->|"HTTP/WebSocket"| C
 
         subgraph C["Server Components"]
-            D["Web Server<br/>(port 65436)"]
+            D["Web Server<br/>(port 9527)"]
             E["Session Manager"]
             F["PTY Wrapper"]
             G["AI Agent CLI<br/>(Claude/Qwen/Gemini)"]
@@ -58,8 +58,8 @@ notepad config.json
 ./start.bat
 
 # 4. Browser access
-# Local test: http://localhost:65436
-# Other devices: http://<YourIP>:65436 (e.g., http://192.168.1.100:65436)
+# Local test: http://localhost:9527
+# Other devices: http://<YourIP>:9527 (e.g., http://192.168.1.100:9527)
 ```
 
 > Check your IP: `ipconfig` (Windows) or `ifconfig`/`ip a` (Linux/Mac)
@@ -82,8 +82,8 @@ cd server && node claude-remote-server.js &
 cd client && node session-manager.js
 
 # 5. Browser access
-# Local test: http://localhost:65436
-# Other devices: http://<YourIP>:65436
+# Local test: http://localhost:9527
+# Other devices: http://<YourIP>:9527
 ```
 
 ## Directory Structure
@@ -120,7 +120,7 @@ claude-remote-control/
   },
   "server": {
     "host": "0.0.0.0",
-    "port": 65436,
+    "port": 9527,
     "token": "YOUR_TOKEN_HERE",
     "authPassword": "YOUR_PASSWORD_HERE"
   },
@@ -172,7 +172,7 @@ server {
     server_name your-domain.com;
 
     location / {
-        proxy_pass http://127.0.0.1:65436;
+        proxy_pass http://127.0.0.1:9527;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";

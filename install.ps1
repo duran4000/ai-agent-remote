@@ -99,7 +99,7 @@ Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "  1. Edit config.json (set token and password)" -ForegroundColor White
 Write-Host "  2. Run start.bat to start services" -ForegroundColor White
-Write-Host "  3. Open http://localhost:65436 in browser" -ForegroundColor White
+Write-Host "  3. Open http://localhost:9527 in browser" -ForegroundColor White
 Write-Host ""
 
 Read-Host "Press Enter to exit"

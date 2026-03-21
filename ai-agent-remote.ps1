@@ -18,7 +18,7 @@ $PROJECT_DIR = $SCRIPT_DIR  # Script is in project root, not a subdirectory
 $SERVER_DIR = Join-Path $PROJECT_DIR "server"
 $CLIENT_DIR = Join-Path $PROJECT_DIR "client"
 $LOGS_DIR = Join-Path $PROJECT_DIR "logs"
-$PORT = 65436
+$PORT = 9527
 
 $SERVER_LOCK_FILE = Join-Path $SERVER_DIR "server.lock"
 $MANAGER_LOCK_FILE = Join-Path $CLIENT_DIR "session-manager.lock"

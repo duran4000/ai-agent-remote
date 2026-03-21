@@ -1,6 +1,6 @@
 # Claude Remote Control 开发文档
 
-> **端口**: 65436 (可在 config.json 中修改)
+> **端口**: 9527 (可在 config.json 中修改)
 
 ## 📋 目录
 1. [快速开始](#一快速开始)
@@ -25,7 +25,7 @@
 .\scripts\manage-processes.ps1 -Action stop-all
 ```
 
-访问: http://localhost:65436/app
+访问: http://localhost:9527/app
 
 ## 二、核心设计
 
@@ -39,7 +39,7 @@ flowchart LR
 
     subgraph 桌面电脑
         subgraph 本机服务
-            Server[Web Server<br/>0.0.0.0:65436]
+            Server[Web Server<br/>0.0.0.0:9527]
             SM[Session Manager]
             Wrapper[PTY Wrapper]
             CLI[AI Agent CLI<br/>Claude/Qwen/Gemini]
@@ -281,9 +281,9 @@ ai-agent-remote/
   },
   "server": {
     "host": "0.0.0.0",
-    "port": 65436,
+    "port": 9527,
     "httpsPort": 65437,
-    "url": "ws://localhost:65436",
+    "url": "ws://localhost:9527",
     "token": "YOUR_AUTH_TOKEN",
     "authPassword": "YOUR_AUTH_PASSWORD"
   },

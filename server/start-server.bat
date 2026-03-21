@@ -6,7 +6,7 @@ echo Claude Remote Control Server
 echo ========================================
 echo.
 
-set PORT=65436
+set PORT=9527
 
 echo [1/3] Checking if port %PORT% is already in use...
 netstat -ano | findstr ":%PORT%" >nul

@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 $PROJECT_DIR = Split-Path -Parent $MyInvocation.MyCommand.Path
-$PORT = 65436
+$PORT = 9527
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Claude Remote Control - Restart Services" -ForegroundColor Cyan

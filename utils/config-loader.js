@@ -24,8 +24,8 @@ export function loadConfig(forceReload = false) {
     return {
       server: {
         host: '127.0.0.1',
-        port: 65436,
-        url: 'ws://localhost:65436',
+        port: 9527,
+        url: 'ws://localhost:9527',
         token: 'YOUR_AUTH_TOKEN'
       },
       session: {
