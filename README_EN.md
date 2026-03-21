@@ -200,11 +200,23 @@ Configure the correct path in `config.json` at `aiAgents.claude.fallbackPath`.
 
 ## Security Recommendations
 
+> ⚠️ **WARNING: Do NOT expose the service directly to the public internet!** Anyone could control your server, posing serious security risks.
+
+### Cross-LAN Access Recommendations
+
+For cross-LAN usage, set up a private virtual network:
+
+- **Tailscale** (Recommended): https://tailscale.com - Free, easy-to-use, cross-platform
+- **ZeroTier**: https://zerotier.com - Self-hosted controller support
+- **WireGuard**: High-performance VPN solution
+
+These tools create secure virtual LANs across different networks, providing the same experience as local LAN access.
+
 ### Firewall Configuration
 
 **Windows Firewall**:
 ```powershell
-# Allow specific IP only
+# Allow specific IP access to port 41491
 netsh advfirewall firewall add rule name="AI Agent Remote" dir=in action=allow protocol=tcp localport=41491 remoteip=192.168.1.0/24
 ```
 
@@ -219,8 +231,7 @@ iptables -A INPUT -p tcp --dport 41491 -j DROP
 
 - **Change default Token and Password**: Set strong credentials in `config.json`
 - **Rotate Token regularly**: Avoid using the same Token for extended periods
-- **Don't expose to public network**: For public access, use HTTPS + Nginx reverse proxy
-- **Use VPN**: Access via Tailscale/ZeroTier is more secure
+- **If public access is required**: Use HTTPS + Nginx reverse proxy with access control
 
 ## Development Documentation
 
