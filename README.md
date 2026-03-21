@@ -10,6 +10,14 @@
 - 🔐 Token 认证 + 密码保护
 - 🌐 支持中转服务器部署（公网访问）
 
+## 前提条件
+
+- 电脑上已安装 AI Agent CLI（如 [Claude Code](https://claude.ai/code)、Qwen、Gemini 等）
+- **手机/平板等终端需能与 AI Agent CLI 所在的电脑在同一局域网内直接通信**
+  - 同一 WiFi 网络
+  - 或通过 VPN/Tailscale 等方式可达
+- 如需公网访问，请参考 [部署到公网](#部署到公网) 章节
+
 ## 快速开始
 
 ### Windows 用户（推荐）
