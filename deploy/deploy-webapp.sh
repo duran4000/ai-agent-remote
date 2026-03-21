@@ -17,7 +17,7 @@ export $(grep -v '^#' "$ENV_FILE" | xargs)
 
 SERVER="${SERVER_USER}@${SERVER_HOST}"
 REMOTE_DIR="${SERVER_PATH}/server/webapp"
-LOCAL_DIR="/mnt/e/MyCode/python/claude-remote-control/server/webapp"
+LOCAL_DIR="${LOCAL_PROJECT_PATH}/server/webapp"
 
 echo "开始部署 Web App..."
 

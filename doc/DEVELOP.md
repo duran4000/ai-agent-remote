@@ -251,27 +251,27 @@ ai-agent-remote/
     "claude": {
       "name": "Claude",
       "command": "claude",
-      "fallbackPath": "C:\\Users\\duran\\.local\\bin\\claude.exe"
+      "fallbackPath": "C:\\Users\\<username>\\.local\\bin\\claude.exe"
     },
     "qwen": {
       "name": "Qwen",
       "command": "qwen",
-      "fallbackPath": "C:\\Users\\duran\\AppData\\Roaming\\npm\\qwen.ps1"
+      "fallbackPath": "C:\\Users\\<username>\\AppData\\Roaming\\npm\\qwen.ps1"
     },
     "opencode": {
       "name": "opencode",
       "command": "opencode",
-      "fallbackPath": "C:\\Users\\duran\\AppData\\Roaming\\npm\\opencode.cmd"
+      "fallbackPath": "C:\\Users\\<username>\\AppData\\Roaming\\npm\\opencode.cmd"
     },
     "iflow": {
       "name": "iFlow",
       "command": "iflow",
-      "fallbackPath": "C:\\Users\\duran\\AppData\\Roaming\\npm\\iflow.cmd"
+      "fallbackPath": "C:\\Users\\<username>\\AppData\\Roaming\\npm\\iflow.cmd"
     },
     "gemini": {
       "name": "Gemini",
       "command": "gemini",
-      "fallbackPath": "C:\\Users\\duran\\AppData\\Roaming\\npm\\gemini.cmd"
+      "fallbackPath": "C:\\Users\\<username>\\AppData\\Roaming\\npm\\gemini.cmd"
     },
     "openclaw": {
       "name": "OpenClaw",
@@ -282,7 +282,7 @@ ai-agent-remote/
   "server": {
     "host": "0.0.0.0",
     "port": 41491,
-    "httpsPort": 65437,
+    "httpsPort": 41492,
     "url": "ws://localhost:41491",
     "token": "YOUR_AUTH_TOKEN",
     "authPassword": "YOUR_AUTH_PASSWORD"
