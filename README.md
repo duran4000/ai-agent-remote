@@ -1,4 +1,4 @@
-# Claude Remote Control
+# AI Agent Remote
 
 [English](README_EN.md) | 简体中文
 
