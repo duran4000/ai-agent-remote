@@ -158,7 +158,7 @@
           </div>
           <div class="form-group inline-group">
             <label for="ai-model">AI Agent</label>
-            <div class="custom-select">
+            <div class="custom-select narrow">
               <div class="custom-select-trigger" id="ai-model-trigger">
                 <span id="ai-model-value">-</span>
                 <span class="custom-select-arrow">▼</span>
@@ -173,19 +173,16 @@
               新建标签
             </label>
           </div>
-          <div class="form-group">
-            <label>蒙版激活方式</label>
-            <div class="toggle-group">
-              <label class="radio-label">
-                <input type="radio" name="overlay-click-mode" value="dblclick" checked>
-                双击激活
-              </label>
-              <label class="radio-label">
-                <input type="radio" name="overlay-click-mode" value="click">
-                单击激活
-              </label>
-            </div>
-            <small class="form-hint">选择点击蒙版激活连接的方式</small>
+          <div class="form-group inline-group overlay-mode-group">
+            <label>蒙版激活</label>
+            <label class="radio-label">
+              <input type="radio" name="overlay-click-mode" value="dblclick" checked>
+              双击
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="overlay-click-mode" value="click">
+              单击
+            </label>
           </div>
         </div>
         <div class="modal-footer">

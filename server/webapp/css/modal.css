@@ -92,16 +92,27 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: nowrap;
 }
 
 .form-group.inline-group label:first-child {
   margin-bottom: 0;
   flex-shrink: 0;
+  line-height: 1.4;
 }
 
 .form-group.inline-group .custom-select {
   flex: 1;
   margin-bottom: 0;
+}
+
+.form-group.inline-group .custom-select.narrow {
+  flex: 0 0 auto;
+  width: 110px;
+}
+
+.form-group.inline-group .checkbox-label {
+  margin-left: auto;
 }
 
 .form-hint {
@@ -127,9 +138,13 @@
   background-color: var(--bg-tertiary);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 8px 10px;
   cursor: pointer;
   transition: border-color 0.2s;
+}
+
+.custom-select.narrow .custom-select-trigger {
+  padding: 6px 8px;
 }
 
 .custom-select-trigger:hover {
@@ -182,19 +197,24 @@
 
 /* ====== 复选框 ====== */
 .checkbox-label {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   font-size: 13px;
   color: var(--text-secondary);
   cursor: pointer;
   white-space: nowrap;
+  line-height: 16px;
+  height: 16px;
 }
 
 .checkbox-label input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   cursor: pointer;
+  margin: 0;
+  padding: 0;
+  vertical-align: baseline;
 }
 
 /* ====== 工作目录下拉 ====== */
@@ -267,4 +287,32 @@
 
 .validation-message {
   flex: 1;
+}
+
+/* ====== 蒙版激活模式 ====== */
+.form-group.overlay-mode-group {
+  gap: 10px;
+  align-items: center;
+}
+
+.form-group.overlay-mode-group > label:first-child {
+  min-width: 60px;
+}
+
+.radio-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.radio-label input[type="radio"] {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  margin: 0;
+  vertical-align: baseline;
 }
