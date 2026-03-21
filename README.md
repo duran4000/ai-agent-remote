@@ -1,5 +1,7 @@
 # Claude Remote Control
 
+[English](README_EN.md) | 简体中文
+
 通过手机或桌面浏览器远程控制电脑上的 AI Agent CLI（Claude Code、Qwen、Gemini 等），实现随时随地与 AI 交互。
 
 ## 功能特点
