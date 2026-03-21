@@ -240,3 +240,11 @@ For detailed documentation, see [doc/DEVELOP.md](doc/DEVELOP.md).
 ## License
 
 MIT
+
+## Disclaimer
+
+This project is for learning and research purposes only. Use at your own risk.
+
+- Do NOT expose the service directly to the public internet
+- Users are responsible for configuring firewalls, VPNs, and other security measures
+- The author is NOT responsible for any issues caused by improper security configuration
