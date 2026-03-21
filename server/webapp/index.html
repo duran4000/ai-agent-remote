@@ -23,25 +23,26 @@
     <div id="header">
       <div class="header-left">
         <span id="connection-status" class="status-dot disconnected" style="display: none;"></span>
-        <span id="status-text" style="display: none;">未连接</span>
+        <span id="status-text" style="display: none;" data-i18n="status.notConnected">未连接</span>
       </div>
     </div>
 
     <div id="tabs-container">
       <div id="tabs-list"></div>
       <div class="tabs-actions">
-        <button id="add-tab-btn" class="icon-btn" title="新建标签">+</button>
-        <a href="/admin" class="icon-btn settings-btn" title="系统设置">⛏</a>
+        <button id="lang-switch" class="lang-btn" title="Switch Language">EN</button>
+        <button id="add-tab-btn" class="icon-btn" data-i18n-title="header.newTab" title="新建标签">+</button>
+        <a href="/admin" class="icon-btn settings-btn" data-i18n-title="header.settings" title="系统设置">⚙</a>
       </div>
     </div>
 
     <div id="session-info">
       <div class="info-item">
         <span id="session-status-dot" class="status-dot disconnected"></span>
-        <span id="session-status-text" class="info-label">已断开</span>
+        <span id="session-status-text" class="info-label" data-i18n="status.disconnected">已断开</span>
       </div>
       <div class="info-item" id="work-dir-container">
-        <span class="info-label">工作目录:</span>
+        <span class="info-label" data-i18n="session.workDir">工作目录:</span>
         <span id="current-work-dir" class="info-value">-</span>
       </div>
     </div>
@@ -54,7 +55,7 @@
             <svg viewBox="0 0 120 120" class="rotating-circle">
               <circle cx="60" cy="60" r="54" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="8 6"/>
             </svg>
-            <span class="overlay-text">已断开</span>
+            <span class="overlay-text" data-i18n="status.disconnected">已断开</span>
           </div>
           <div class="ripple-container"></div>
         </div>
@@ -63,12 +64,12 @@
 
     <div id="input-area">
       <div id="input-wrapper">
-        <input type="text" id="command-input" placeholder="输入命令..." autocomplete="off" autocapitalize="off" disabled>
+        <input type="text" id="command-input" data-i18n="terminal.placeholder" placeholder="输入命令..." autocomplete="off" autocapitalize="off" disabled>
       </div>
       <div id="quick-actions">
         <div class="action-group frequently-used">
-          <span class="action-btn" data-action="esc" title="退出/取消">ESC</span>
-          <span class="action-btn" data-action="toggle-shortcuts" title="展开更多">⌨️</span>
+          <span class="action-btn" data-action="esc" data-i18n-title="btn.esc" title="退出/取消">ESC</span>
+          <span class="action-btn" data-action="toggle-shortcuts" data-i18n-title="btn.more" title="展开更多">⌨️</span>
         </div>
         <div class="action-group frequently-used num-group">
           <span class="action-btn" data-action="num-1">1</span>
@@ -77,46 +78,46 @@
         <div class="action-group frequently-used">
           <span class="action-btn" data-action="num-3">3</span>
           <span class="action-btn" data-action="num-4">4</span>
-          <span class="action-btn arrow" data-action="up" title="上一条命令">↑</span>
-          <span class="action-btn arrow" data-action="down" title="下一条命令">↓</span>
-          <span class="action-btn arrow" data-action="left" title="左移">←</span>
-          <span class="action-btn arrow" data-action="right" title="右移">→</span>
-          <span class="action-btn" id="font-size-btn" title="调整字体">Aa</span>
+          <span class="action-btn arrow" data-action="up" data-i18n-title="btn.prevCmd" title="上一条命令">↑</span>
+          <span class="action-btn arrow" data-action="down" data-i18n-title="btn.nextCmd" title="下一条命令">↓</span>
+          <span class="action-btn arrow" data-action="left" data-i18n-title="btn.left" title="左移">←</span>
+          <span class="action-btn arrow" data-action="right" data-i18n-title="btn.right" title="右移">→</span>
+          <span class="action-btn" id="font-size-btn" data-i18n-title="btn.fontSize" title="调整字体">Aa</span>
         </div>
         <div class="action-group frequently-used right-group">
-          <span class="action-btn" data-action="backspace" title="退格">⌫</span>
-          <span class="action-btn" data-action="enter" title="回车">Enter</span>
+          <span class="action-btn" data-action="backspace" data-i18n-title="btn.backspace" title="退格">⌫</span>
+          <span class="action-btn" data-action="enter" data-i18n-title="btn.enter" title="回车">Enter</span>
         </div>
         <div class="action-group">
-          <span class="action-btn" data-action="clear-screen" title="清屏">清屏</span>
-          <span class="action-btn" data-action="tab" title="自动补全">TAB</span>
+          <span class="action-btn" data-action="clear-screen" data-i18n="btn.clear" title="清屏">清屏</span>
+          <span class="action-btn" data-action="tab" data-i18n-title="btn.tab" title="自动补全">TAB</span>
         </div>
         <div class="action-group">
-          <span class="action-btn" data-action="ctrl-c" title="中断">Ctrl+C</span>
-          <span class="action-btn" data-action="ctrl-d" title="退出">Ctrl+D</span>
-          <span class="action-btn" data-action="ctrl-o" title="选项">Ctrl+O</span>
-          <span class="action-btn" data-action="ctrl-z" title="撤销">Ctrl+Z</span>
+          <span class="action-btn" data-action="ctrl-c" data-i18n-title="btn.interrupt" title="中断">Ctrl+C</span>
+          <span class="action-btn" data-action="ctrl-d" data-i18n-title="btn.exit" title="退出">Ctrl+D</span>
+          <span class="action-btn" data-action="ctrl-o" data-i18n-title="btn.options" title="选项">Ctrl+O</span>
+          <span class="action-btn" data-action="ctrl-z" data-i18n-title="btn.undo" title="撤销">Ctrl+Z</span>
         </div>
         <div class="action-group">
-          <span class="action-btn" data-action="ctrl-t" title="切换任务">Ctrl+T</span>
-          <span class="action-btn" data-action="ctrl-s" title="暂存">Ctrl+S</span>
-          <span class="action-btn" data-action="ctrl-g" title="编辑器">Ctrl+G</span>
+          <span class="action-btn" data-action="ctrl-t" data-i18n-title="btn.switchTask" title="切换任务">Ctrl+T</span>
+          <span class="action-btn" data-action="ctrl-s" data-i18n-title="btn.save" title="暂存">Ctrl+S</span>
+          <span class="action-btn" data-action="ctrl-g" data-i18n-title="btn.editor" title="编辑器">Ctrl+G</span>
         </div>
         <div class="action-group">
-          <span class="action-btn" data-action="ctrl-shift-minus" title="撤销">Ctrl+Shift+-</span>
-          <span class="action-btn" data-action="alt-v" title="粘贴图片">Alt+V</span>
-          <span class="action-btn" data-action="meta-p" title="切换模型">Meta+P</span>
-          <span class="action-btn" data-action="meta-o" title="快速模式">Meta+O</span>
+          <span class="action-btn" data-action="ctrl-shift-minus" data-i18n-title="btn.undo" title="撤销">Ctrl+Shift+-</span>
+          <span class="action-btn" data-action="alt-v" data-i18n-title="btn.pasteImg" title="粘贴图片">Alt+V</span>
+          <span class="action-btn" data-action="meta-p" data-i18n-title="btn.switchModel" title="切换模型">Meta+P</span>
+          <span class="action-btn" data-action="meta-o" data-i18n-title="btn.fastMode" title="快速模式">Meta+O</span>
         </div>
         <div class="action-group">
-          <span class="action-btn" data-action="shift-tab" title="自动接受">Shift+Tab</span>
-          <span class="action-btn" data-action="newline" title="换行">\\⏎</span>
+          <span class="action-btn" data-action="shift-tab" data-i18n-title="btn.autoAccept" title="自动接受">Shift+Tab</span>
+          <span class="action-btn" data-action="newline" data-i18n-title="btn.newline" title="换行">\\⏎</span>
         </div>
         <div class="action-group">
-          <span class="action-btn" data-action="bash-mode" title="Bash模式">!</span>
-          <span class="action-btn" data-action="slash" title="命令">/</span>
-          <span class="action-btn" data-action="at" title="文件路径">@</span>
-          <span class="action-btn" data-action="ampersand" title="后台">&</span>
+          <span class="action-btn" data-action="bash-mode" data-i18n-title="btn.bashMode" title="Bash模式">!</span>
+          <span class="action-btn" data-action="slash" data-i18n-title="btn.command" title="命令">/</span>
+          <span class="action-btn" data-action="at" data-i18n-title="btn.filePath" title="文件路径">@</span>
+          <span class="action-btn" data-action="ampersand" data-i18n-title="btn.background" title="后台">&</span>
         </div>
         <div class="action-group numbers">
           <span class="action-btn" data-action="num-5">5</span>
@@ -131,22 +132,22 @@
     <div id="settings-modal" class="modal hidden">
       <div class="modal-content">
         <div class="modal-header">
-          <h2>设置</h2>
+          <h2 data-i18n="settings.title">设置</h2>
           <button id="close-settings" class="icon-btn">&times;</button>
         </div>
         <div class="modal-body">
           <div class="form-group">
-            <label for="server-url">服务器地址</label>
+            <label for="server-url" data-i18n="settings.serverUrl">服务器地址</label>
             <input type="text" id="server-url" placeholder="ws://localhost:41491">
           </div>
           <div class="form-group">
-            <label for="auth-token">认证Token</label>
-            <input type="password" id="auth-token" placeholder="输入Token">
+            <label for="auth-token" data-i18n="settings.authToken">认证Token</label>
+            <input type="password" id="auth-token" data-i18n="settings.authTokenPlaceholder" placeholder="输入Token">
           </div>
           <div class="form-group">
-            <label for="work-dir">工作目录</label>
+            <label for="work-dir" data-i18n="settings.workDir">工作目录</label>
             <div class="work-dir-container">
-              <input type="text" id="work-dir" placeholder="如: E:/MyCode/python/my-project">
+              <input type="text" id="work-dir" data-i18n="settings.workDirPlaceholder" placeholder="如: E:/MyCode/python/my-project">
               <div id="work-dir-dropdown" class="work-dir-dropdown hidden">
               </div>
             </div>
@@ -154,7 +155,7 @@
               <span class="validation-icon"></span>
               <span class="validation-message"></span>
             </div>
-            <small class="form-hint">AI Agent将在此目录下运行</small>
+            <small class="form-hint" data-i18n="settings.workDirHint">AI Agent将在此目录下运行</small>
           </div>
           <div class="form-group inline-group">
             <label for="ai-model">AI Agent</label>
@@ -170,25 +171,25 @@
             </div>
             <label class="checkbox-label">
               <input type="checkbox" id="new-tab-checkbox" checked>
-              新建标签
+              <span data-i18n="settings.newTab">新建标签</span>
             </label>
           </div>
           <div class="form-group inline-group overlay-mode-group">
-            <label>蒙版激活</label>
+            <label data-i18n="settings.overlayMode">蒙版激活</label>
             <label class="radio-label">
               <input type="radio" name="overlay-click-mode" value="dblclick" checked>
-              双击
+              <span data-i18n="settings.doubleClick">双击</span>
             </label>
             <label class="radio-label">
               <input type="radio" name="overlay-click-mode" value="click">
-              单击
+              <span data-i18n="settings.singleClick">单击</span>
             </label>
           </div>
         </div>
         <div class="modal-footer">
           <div class="modal-divider"></div>
-          <button id="connect-btn" class="primary-btn full-width">连接</button>
-          <button id="disconnect-btn" class="danger-btn full-width hidden">断开连接</button>
+          <button id="connect-btn" class="primary-btn full-width" data-i18n="settings.connect">连接</button>
+          <button id="disconnect-btn" class="danger-btn full-width hidden" data-i18n="settings.disconnect">断开连接</button>
         </div>
       </div>
     </div>

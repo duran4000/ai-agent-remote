@@ -1,6 +1,7 @@
 import { WebSocketManager } from './websocket.js';
 import { Terminal } from './terminal.js';
 import { STATUS } from './constants.js';
+import { getCurrentLang, setLang, applyTranslations, t } from './i18n.js';
 
 function waitForFitAddon(timeout = 5000) {
   return new Promise((resolve, reject) => {
@@ -94,6 +95,9 @@ class App {
 
     // 加载保存的字体大小
     this.loadFontSize();
+
+    // 初始化语言
+    this.initLanguage();
 
     this.setupEventListeners();
     this.setupVirtualKeyboardHandler();
@@ -192,6 +196,26 @@ class App {
       if (size >= 10 && size <= 28) {
         this.terminal.setFontSize(size);
       }
+    }
+  }
+
+  initLanguage() {
+    const lang = getCurrentLang();
+    applyTranslations(lang);
+    this.updateLangButton(lang);
+  }
+
+  toggleLanguage() {
+    const currentLang = getCurrentLang();
+    const newLang = currentLang === 'zh' ? 'en' : 'zh';
+    setLang(newLang);
+    this.updateLangButton(newLang);
+  }
+
+  updateLangButton(lang) {
+    const langSwitch = document.getElementById('lang-switch');
+    if (langSwitch) {
+      langSwitch.textContent = lang === 'zh' ? 'EN' : '中文';
     }
   }
 
@@ -374,6 +398,12 @@ class App {
         this.handleQuickAction(btn.dataset.action);
       }
     });
+
+    // 语言切换按钮
+    const langSwitch = document.getElementById('lang-switch');
+    if (langSwitch) {
+      langSwitch.addEventListener('click', () => this.toggleLanguage());
+    }
 
     this.elements.serverUrl.addEventListener('change', () => {
       this.saveSettings();
