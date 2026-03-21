@@ -198,6 +198,35 @@ rm *.lock
 
 在 `config.json` 的 `aiAgents.claude.fallbackPath` 中配置正确的路径。
 
+## 安全建议
+
+### 防火墙配置
+
+建议在防火墙中限制端口访问，只允许可信 IP：
+
+**Windows 防火墙**：
+```powershell
+# 允许特定 IP 访问端口 41491
+netsh advfirewall firewall add rule name="AI Agent Remote" dir=in action=allow protocol=tcp localport=41491 remoteip=192.168.1.0/24
+
+# 或只允许单个 IP
+netsh advfirewall firewall add rule name="AI Agent Remote" dir=in action=allow protocol=tcp localport=41491 remoteip=192.168.1.100
+```
+
+**Linux iptables**：
+```bash
+# 只允许特定 IP 访问
+iptables -A INPUT -p tcp --dport 41491 -s 192.168.1.0/24 -j ACCEPT
+iptables -A INPUT -p tcp --dport 41491 -j DROP
+```
+
+### 其他安全措施
+
+- **修改默认 Token 和密码**：在 `config.json` 中设置强密码
+- **定期更换 Token**：避免长期使用同一个 Token
+- **不要暴露到公网**：如需公网访问，请使用 HTTPS + Nginx 反向代理
+- **使用 VPN**：通过 Tailscale/ZeroTier 等 VPN 工具访问更安全
+
 ## 开发文档
 
 详细文档请参考 [doc/DEVELOP.md](doc/DEVELOP.md)。

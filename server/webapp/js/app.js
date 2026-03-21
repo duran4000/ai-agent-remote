@@ -401,7 +401,7 @@ class App {
     });
     
     this.elements.addTabBtn.addEventListener('click', () => this.addTab());
-    this.elements.terminalOverlay.addEventListener('dblclick', (e) => {
+    this.elements.terminalOverlay.addEventListener('click', (e) => {
       const overlay = this.elements.terminalOverlay;
 
       // 检查是否点击在圆圈内
@@ -412,7 +412,7 @@ class App {
       this.playRippleEffect(e);
 
       // 然后执行解锁动画
-      // 如果是断开状态，双击重新连接
+      // 如果是断开状态，单击重新连接
       if (overlay.classList.contains('disconnected')) {
         this.animateUnlock(() => {
           this.reconnectTab(this.currentTabId);

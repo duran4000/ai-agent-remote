@@ -198,6 +198,30 @@ rm *.lock
 
 Configure the correct path in `config.json` at `aiAgents.claude.fallbackPath`.
 
+## Security Recommendations
+
+### Firewall Configuration
+
+**Windows Firewall**:
+```powershell
+# Allow specific IP only
+netsh advfirewall firewall add rule name="AI Agent Remote" dir=in action=allow protocol=tcp localport=41491 remoteip=192.168.1.0/24
+```
+
+**Linux iptables**:
+```bash
+# Allow specific IP only
+iptables -A INPUT -p tcp --dport 41491 -s 192.168.1.0/24 -j ACCEPT
+iptables -A INPUT -p tcp --dport 41491 -j DROP
+```
+
+### Other Security Measures
+
+- **Change default Token and Password**: Set strong credentials in `config.json`
+- **Rotate Token regularly**: Avoid using the same Token for extended periods
+- **Don't expose to public network**: For public access, use HTTPS + Nginx reverse proxy
+- **Use VPN**: Access via Tailscale/ZeroTier is more secure
+
 ## Development Documentation
 
 For detailed documentation, see [doc/DEVELOP.md](doc/DEVELOP.md).
