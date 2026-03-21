@@ -1,0 +1,33 @@
+{
+  "aiAgents": {
+    "claude": {
+      "name": "Claude",
+      "command": "claude --dangerously-skip-permissions",
+      "fallbackPath": ""
+    }
+  },
+  "server": {
+    "host": "0.0.0.0",
+    "port": 65436,
+    "httpsPort": 65437,
+    "url": "ws://localhost:65436",
+    "token": "YOUR_TOKEN_HERE",
+    "authPassword": "YOUR_PASSWORD_HERE"
+  },
+  "connection": {
+    "defaultMode": "relay",
+    "fallbackToRelay": true
+  },
+  "session": {
+    "maxHistory": 1000,
+    "timeout": 3600000
+  },
+  "wrapper": {
+    "defaultCols": 120,
+    "defaultRows": 40
+  },
+  "sessions": {
+    "defaults": {},
+    "overrides": {}
+  }
+}

@@ -1,0 +1,67 @@
+# Path to your oh-my-zsh installation.
+export ZSH="$HOME/.oh-my-zsh"
+
+# Set name of theme to load
+ZSH_THEME="powerlevel10k/powerlevel10k"
+
+# Which plugins would you like to load?
+plugins=(git)
+
+# User configuration
+export PATH="$HOME/bin:$HOME/.local/bin:$PATH"
+
+# sshd auto-start
+if ! pgrep sshd > /dev/null; then sshd; fi
+
+# Source oh-my-zsh
+source $ZSH/oh-my-zsh.sh
+
+# Aliases
+alias ll='ls -laF'
+alias la='ls -A'
+alias l='ls -CF'
+alias ..='cd ..'
+alias ...='cd ../..'
+alias cls='clear'
+alias h='history'
+alias now='date +"%Y-%m-%d %H:%M:%S"'
+alias ports='netstat -tulanp'
+alias ipinfo='curl -s ipinfo.io/json'
+alias myip='curl -s ifconfig.me'
+alias ping='ping -c 4'
+alias nmap='nmap -T4'
+alias sqlmap='sqlmap --batch --random-agent --level=3 --risk=2'
+
+# Git aliases
+alias gs='git status'
+alias ga='git add'
+alias gc='git commit'
+alias gp='git push'
+alias gl='git pull'
+alias gd='git diff'
+alias gb='git branch'
+alias gco='git checkout'
+
+# AI tools aliases
+alias claude='claude'
+alias qwen='qwen'
+alias iflow='iflow'
+alias openclaw='openclaw'
+
+# Network aliases
+alias scan='nmap -sV -sC -O -p-'
+alias quickscan='nmap -T4 -F'
+
+# Termux aliases
+alias pkg='pkg'
+alias apt='apt'
+alias update='pkg update && pkg upgrade -y'
+alias install='pkg install -y'
+alias remove='pkg remove -y'
+alias search='pkg search'
+
+# System info
+alias cpu='cat /proc/cpuinfo'
+alias mem='free -h'
+alias disk='df -h'
+alias sys='uname -a'

@@ -1,0 +1,525 @@
+/* ============================================
+   Components - 组件样式
+   ============================================ */
+
+/* ====== 标签栏 ====== */
+#tabs-container {
+  display: flex;
+  align-items: center;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  margin-top: 0;
+  padding: 2px 8px;
+  gap: 4px;
+}
+
+#tabs-list {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+#add-tab-btn {
+  flex-shrink: 0;
+  font-size: 18px;
+  padding: 4px 8px;
+}
+
+.tabs-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.tabs-actions .icon-btn {
+  font-size: 18px;
+  padding: 4px 8px;
+  text-decoration: none;
+  color: var(--text-secondary);
+}
+
+.tab-btn {
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 180px;
+  position: relative;
+}
+
+.tab-btn:hover {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.tab-btn.active {
+  background-color: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.tab-btn.active.connected {
+  background-color: #15803d;
+  border-color: #15803d;
+}
+}
+
+.tab-btn .tab-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+.tab-btn .tab-close:hover {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.tab-btn .tab-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  text-align: left;
+}
+
+.tab-btn .tab-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tab-btn .tab-status-dot.connected {
+  background-color: var(--success);
+}
+
+.tab-btn .tab-status-dot.disconnected {
+  background-color: var(--danger);
+}
+
+.tab-btn .tab-lock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  border-radius: 3px;
+  color: var(--text-secondary);
+}
+
+.tab-btn .tab-lock.locked {
+  color: var(--warning);
+  opacity: 1;
+}
+
+.tab-btn .tab-lock.unlocked {
+  color: var(--success);
+  opacity: 1;
+  background-color: rgba(78, 201, 176, 0.2);
+}
+
+.tab-btn .tab-lock:hover {
+  opacity: 1;
+  background-color: var(--bg-primary);
+}
+
+.tab-btn .tab-lock.shake {
+  animation: shake 0.3s ease;
+}
+
+.tab-btn.locked .tab-close {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.tab-btn .tab-close-hint {
+  position: absolute;
+  right: -5px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--danger);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  white-space: nowrap;
+  z-index: 100;
+  animation: hintFadeIn 0.2s ease;
+}
+
+.tab-btn .tab-close-hint.fade-out {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+/* ====== 会话信息栏 ====== */
+#session-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  background-color: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.info-item#work-dir-container {
+  flex: 1;
+  justify-content: flex-start;
+}
+
+#device-info {
+  display: none !important;
+}
+
+.info-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.info-value {
+  color: var(--text-primary);
+  font-weight: 600;
+  flex: 1;
+  text-align: left;
+  overflow: visible;
+  white-space: nowrap;
+}
+
+/* ====== 输入区域 ====== */
+#input-area {
+  background-color: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  padding: 6px 12px 10px 12px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+#input-area.hidden-input #input-wrapper {
+  display: none;
+}
+
+#input-area.hidden-input #quick-actions.expanded {
+  display: flex;
+}
+
+#input-wrapper {
+  display: none;
+}
+
+#command-input {
+  flex: 1;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: var(--text-primary);
+  font-size: 16px;
+  outline: none;
+  display: none;
+  caret-color: transparent;
+}
+
+#command-input:focus {
+  border-color: var(--accent);
+}
+
+#command-input::placeholder {
+  color: var(--text-secondary);
+}
+
+/* ====== 快捷按钮 ====== */
+#quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  justify-content: flex-start;
+}
+
+#quick-actions .action-group {
+  display: none;
+}
+
+#quick-actions .action-group.frequently-used {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 2px;
+}
+
+#quick-actions .action-group.frequently-used.num-group .action-btn {
+  min-width: 33px !important;
+  padding: 4px 8px !important;
+}
+
+#quick-actions .action-group.frequently-used.right-group {
+  margin-left: auto;
+  gap: 2px;
+}
+
+#quick-actions .action-group.frequently-used .action-btn {
+  padding: 4px !important;
+  font-size: 11px !important;
+  min-width: 22px !important;
+  min-height: 22px !important;
+  line-height: 22px !important;
+  height: 22px !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#quick-actions.expanded .action-group {
+  display: flex;
+}
+
+#quick-actions.expanded .action-group.frequently-used {
+  display: flex;
+}
+
+.action-group {
+  display: flex;
+  gap: 4px;
+}
+
+.action-group.numbers {
+  gap: 2px;
+}
+
+.action-group.numbers .action-btn {
+  padding: 8px 10px;
+  min-width: 32px;
+}
+
+.action-btn.arrow {
+  font-size: 16px;
+  padding: 8px 14px;
+}
+
+.action-btn {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-appearance: none;
+  appearance: none;
+  text-align: center;
+}
+
+.action-btn:hover {
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ====== 按钮 ====== */
+.icon-btn {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-btn:hover {
+  background-color: var(--bg-tertiary);
+}
+
+.primary-btn {
+  background-color: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.primary-btn:hover {
+  background-color: var(--accent-hover);
+}
+
+.primary-btn:disabled {
+  background-color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+.danger-btn {
+  background-color: var(--danger);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.danger-btn:hover {
+  background-color: #dc2626;
+}
+
+.full-width {
+  width: 100%;
+  margin-top: auto !important;
+  flex-shrink: 0;
+}
+
+#connect-btn {
+  margin-top: auto !important;
+  flex-shrink: 0;
+}
+
+.modal-divider {
+  border-top: 1px solid var(--border);
+  margin: 8px 0;
+  flex-shrink: 0;
+}
+
+/* ====== 状态指示 ====== */
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--danger);
+}
+
+.status-dot.connected {
+  background-color: var(--success);
+}
+
+.status-dot.connecting {
+  background-color: var(--warning);
+  animation: pulse 1s infinite;
+}
+
+#status-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.terminal-line {
+  margin-bottom: 2px;
+}
+
+.terminal-line.error {
+  color: var(--danger);
+}
+
+.terminal-line.success {
+  color: var(--success);
+}
+
+.terminal-line.info {
+  color: var(--accent);
+}
+
+/* ====== 字体调整按钮 ====== */
+#font-size-btn {
+  font-weight: 600;
+}
+
+.font-size-panel {
+  position: fixed;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.font-size-panel.hidden {
+  display: none;
+}
+
+.font-size-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-primary);
+  background: none;
+  border: none;
+  text-align: center;
+  transition: background-color 0.2s;
+  min-width: 40px;
+}
+
+.font-size-option:hover {
+  background-color: var(--bg-tertiary);
+}
+
+.font-size-option.active {
+  background-color: var(--accent);
+  color: white;
+}

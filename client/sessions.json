@@ -1,0 +1,10 @@
+{
+  "sessions": {
+    "overrides": {
+      "claude:e:/mycode/python": {
+        "claudePath": "cmd",
+        "workDir": "e:/mycode/python"
+      }
+    }
+  }
+}

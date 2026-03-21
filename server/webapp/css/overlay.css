@@ -1,0 +1,243 @@
+/* ============================================
+   Overlay Effects - 蒙版特效
+   ============================================ */
+
+/* ====== 蒙版基础 ====== */
+.terminal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--overlay-bg-active);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 99999;
+  color: var(--overlay-text-active);
+  font-size: 16px;
+  font-weight: 500;
+  pointer-events: auto;
+}
+
+.terminal-overlay.active {
+  display: flex;
+}
+
+.terminal-overlay.disconnected {
+  background: var(--overlay-bg-disconnected);
+  display: flex;
+  color: var(--overlay-text-disconnected);
+}
+
+/* ====== 蒙版内容容器 ====== */
+.overlay-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ====== 解锁圆圈 ====== */
+.unlock-circle {
+  position: relative;
+  width: 6em;
+  height: 6em;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  outline: none;
+  animation: circle-breathe 6s ease-in-out infinite;
+}
+
+@keyframes circle-breathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+.unlock-circle:focus {
+  outline: none;
+}
+
+/* ====== 旋转圆圈 ====== */
+.rotating-circle {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  animation: rotate 8s linear infinite;
+  color: var(--overlay-glow-active);
+  filter: drop-shadow(0 0 8px currentColor) drop-shadow(0 0 16px currentColor);
+  transform-origin: center center;
+}
+
+.terminal-overlay.disconnected .rotating-circle {
+  color: var(--overlay-glow-disconnected);
+  animation: rotate 8s linear infinite, pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 6px currentColor) drop-shadow(0 0 12px currentColor);
+  }
+  50%{
+    filter: drop-shadow(0 0 12px currentColor) drop-shadow(0 0 24px currentColor) drop-shadow(0 0 36px currentColor);
+  }
+}
+
+/* ====== 蒙版文字 ====== */
+.overlay-text {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  z-index: 1;
+  transition: all 0.3s ease;
+  background: transparent;
+  border: none;
+  padding: 8px 12px;
+  color: var(--overlay-text-active);
+  text-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+  animation: text-breathe 6s ease-in-out infinite;
+}
+
+.terminal-overlay.disconnected .overlay-text {
+  color: var(--overlay-text-disconnected);
+  text-shadow: 0 0 8px currentColor, 0 0 16px currentColor;
+  animation: text-breathe 6s ease-in-out infinite, text-pulse-glow 6s ease-in-out infinite;
+}
+
+@keyframes text-breathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes text-pulse-glow {
+  0%, 100% {
+    text-shadow: 0 0 8px currentColor, 0 0 16px currentColor;
+  }
+  50% {
+    text-shadow: 0 0 12px currentColor, 0 0 24px currentColor, 0 0 36px currentColor;
+  }
+}
+  text-shadow: var(--overlay-text-shadow-disconnected);
+}
+
+/* ====== 涟漪效果容器 ====== */
+.ripple-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+/* ====== 涟漪效果 ====== */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  transform: scale(0);
+  animation: ripple-expand 2s ease-out forwards;
+  pointer-events: none;
+}
+
+.ripple-ring {
+  border: 3px solid var(--ripple-color-active);
+  background: transparent;
+  box-shadow: var(--ripple-shadow-active);
+}
+
+.ripple-fill {
+  background: var(--ripple-gradient-active);
+}
+
+.terminal-overlay.disconnected .ripple-ring {
+  border-color: var(--ripple-color-disconnected);
+  box-shadow: var(--ripple-shadow-disconnected);
+}
+
+.terminal-overlay.disconnected .ripple-fill {
+  background: var(--ripple-gradient-disconnected);
+}
+
+@keyframes ripple-expand {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  70% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+/* ====== 解锁成功动画 ====== */
+.terminal-overlay.unlocking .unlock-circle {
+  animation: unlock-success 0.4s ease-out forwards;
+}
+
+.terminal-overlay.unlocking .rotating-circle {
+  animation: none !important;
+}
+
+.terminal-overlay.unlocking .overlay-text {
+  animation: text-fade-out 0.25s ease-out forwards;
+}
+
+@keyframes unlock-success {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+@keyframes text-fade-out {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+
+/* ====== 提示动画 ====== */
+@keyframes hintFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}

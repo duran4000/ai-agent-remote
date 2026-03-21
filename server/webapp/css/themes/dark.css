@@ -1,0 +1,71 @@
+/* ============================================
+   Dark Theme - 深色主题
+   ============================================ */
+
+:root {
+  /* 背景色 */
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #252526;
+  --bg-tertiary: #2d2d30;
+
+  /* 文字色 */
+  --text-primary: #cccccc;
+  --text-secondary: #858585;
+
+  /* 强调色 */
+  --accent: #007acc;
+  --accent-hover: #0062a3;
+
+  /* 状态色 */
+  --success: #00ff00;
+  --warning: #dcdcaa;
+  --danger: #f48771;
+
+  /* 边框色 */
+  --border: #3e3e42;
+
+  /* 终端色 */
+  --terminal-bg: #1e1e1e;
+  --terminal-text: #d4d4d4;
+
+  /* 蒙版特效色 - 连接状态 */
+  --overlay-connected-color: #4ade80;
+  --overlay-connected-glow: rgba(74, 222, 128, 0.8);
+  --overlay-connected-soft: rgba(74, 222, 128, 0.5);
+
+  /* 蒙版特效色 - 断开状态（灰度风格） */
+  --overlay-disconnected-color: #888888;
+  --overlay-disconnected-glow: rgba(136, 136, 136, 0.8);
+  --overlay-disconnected-soft: rgba(136, 136, 136, 0.5);
+
+  /* 蒙版背景 */
+  --overlay-bg-active: rgba(0, 0, 0, 0.3);
+  --overlay-bg-disconnected: rgba(30, 30, 30, 0.7);
+
+  /* 蒙版文字 - 连接状态（锁定中） */
+  --overlay-text-active: #ffffff;
+  --overlay-text-shadow-active: 0 0 10px rgba(255, 255, 255, 0.5);
+
+  /* 蒙版文字 - 断开状态（灰度风格） */
+  --overlay-text-disconnected: #aaaaaa;
+  --overlay-text-shadow-disconnected: 0 0 12px rgba(170, 170, 170, 0.4);
+
+  /* 蒙版圆圈辉光 - 连接状态 */
+  --overlay-glow-active: rgba(255, 255, 255, 0.6);
+  --overlay-glow-filter-active: drop-shadow(0 0 8px rgba(255, 255, 255, 0.5));
+
+  /* 蒙版圆圈辉光 - 断开状态（灰度风格） */
+  --overlay-glow-disconnected: #888888;
+  --overlay-glow-filter-disconnected: drop-shadow(0 0 6px rgba(136, 136, 136, 0.4));
+  --overlay-glow-filter-disconnected-intense: drop-shadow(0 0 12px rgba(136, 136, 136, 0.6));
+
+  /* 涟漪效果 - 连接状态 */
+  --ripple-color-active: rgba(255, 255, 255, 0.6);
+  --ripple-shadow-active: 0 0 15px rgba(255, 255, 255, 0.4);
+  --ripple-gradient-active: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
+
+  /* 涟漪效果 - 断开状态（灰度风格） */
+  --ripple-color-disconnected: rgba(136, 136, 136, 0.6);
+  --ripple-shadow-disconnected: 0 0 15px rgba(136, 136, 136, 0.4);
+  --ripple-gradient-disconnected: radial-gradient(circle, rgba(136, 136, 136, 0.25) 0%, transparent 70%);
+}

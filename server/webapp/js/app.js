@@ -1,0 +1,1463 @@
+import { WebSocketManager } from './websocket.js';
+import { Terminal } from './terminal.js';
+import { STATUS } from './constants.js';
+
+function waitForFitAddon(timeout = 5000) {
+  return new Promise((resolve, reject) => {
+    if (window.FitAddon) {
+      resolve();
+      return;
+    }
+    const startTime = Date.now();
+    const check = () => {
+      if (window.FitAddon) {
+        resolve();
+      } else if (Date.now() - startTime > timeout) {
+        reject(new Error('FitAddon load timeout'));
+      } else {
+        setTimeout(check, 50);
+      }
+    };
+    check();
+  });
+}
+
+class App {
+  constructor() {
+    this.terminal = null;
+    this.settings = this.loadSettings();
+    this.desktopDisconnected = false;
+    this.tabs = this.loadTabs();
+    this.currentTabId = this.tabs.length > 0 ? this.tabs[0].id : null;
+    this.tabConnections = new Map();
+    this.aiAgents = {};
+
+    Object.defineProperty(this, 'wsManager', {
+      get() {
+        const connection = this.tabConnections.get(this.currentTabId);
+        return connection ? connection.wsManager : null;
+      }
+    });
+
+    this.elements = {
+      connectionStatus: document.getElementById('connection-status'),
+      statusText: document.getElementById('status-text'),
+      terminal: document.getElementById('terminal'),
+      commandInput: document.getElementById('command-input'),
+      settingsBtn: document.getElementById('settings-btn'),
+      settingsModal: document.getElementById('settings-modal'),
+      closeSettings: document.getElementById('close-settings'),
+      serverUrl: document.getElementById('server-url'),
+      authToken: document.getElementById('auth-token'),
+      workDir: document.getElementById('work-dir'),
+      aiAgent: document.getElementById('ai-model'),
+      aiAgentTrigger: document.getElementById('ai-model-trigger'),
+      aiAgentValue: document.getElementById('ai-model-value'),
+      aiAgentOptions: document.getElementById('ai-model-options'),
+      connectBtn: document.getElementById('connect-btn'),
+      disconnectBtn: document.getElementById('disconnect-btn'),
+      newTabCheckbox: document.getElementById('new-tab-checkbox'),
+      addTabBtn: document.getElementById('add-tab-btn'),
+      quickActions: document.getElementById('quick-actions'),
+      inputArea: document.getElementById('input-area'),
+      currentWorkDir: document.getElementById('current-work-dir'),
+      sessionStatusDot: document.getElementById('session-status-dot'),
+      sessionStatusText: document.getElementById('session-status-text'),
+      tabsList: document.getElementById('tabs-list'),
+      addTabBtn: document.getElementById('add-tab-btn'),
+      terminalOverlay: document.getElementById('terminal-overlay'),
+      fontSizeBtn: document.getElementById('font-size-btn')
+    };
+
+    this.init();
+  }
+
+  async init() {
+    if (!this.checkAuth()) {
+      return;
+    }
+    
+    try {
+      await waitForFitAddon();
+    } catch (e) {
+      console.error('Failed to load FitAddon:', e);
+      return;
+    }
+    
+    await this.loadAIAgents();
+    
+    this.terminal = new Terminal(this.elements.terminal, (cols, rows) => {
+      this.handleTerminalResize(cols, rows);
+    }, (data) => {
+      this.handleTerminalInput(data);
+    });
+
+    // 加载保存的字体大小
+    this.loadFontSize();
+
+    this.setupEventListeners();
+    this.setupVirtualKeyboardHandler();
+    this.setupFontSizeHandler();
+    this.updateConnectionUI(false);
+    this.renderTabs();
+    this.loadCurrentTabSettings();
+    this.loadWorkDirHistory();
+  }
+
+  setupVirtualKeyboardHandler() {
+    // 使用 visualViewport API 检测软键盘弹出
+    if (!window.visualViewport) {
+      console.log('[App] visualViewport not supported');
+      return;
+    }
+
+    const app = document.getElementById('app');
+
+    const handleViewportChange = () => {
+      // 获取可视区域相对于整个窗口的偏移
+      const viewportHeight = window.visualViewport.height;
+      const viewportTop = window.visualViewport.offsetTop;
+
+      // 计算键盘高度（窗口高度 - 可视区域高度）
+      const keyboardHeight = window.innerHeight - viewportHeight;
+
+      console.log('[App] Viewport change:', {
+        viewportHeight,
+        viewportTop,
+        keyboardHeight,
+        innerHeight: window.innerHeight
+      });
+
+      if (keyboardHeight > 100) {
+        // 键盘弹出，调整布局
+        // 将 app 的高度限制在可视区域内
+        app.style.height = `${viewportHeight}px`;
+
+        // 滚动页面以确保终端底部可见
+        requestAnimationFrame(() => {
+          window.scrollTo(0, 0);
+          document.body.scrollTop = 0;
+          document.documentElement.scrollTop = 0;
+        });
+
+        // 延迟调整终端大小，确保布局稳定后再调整
+        setTimeout(() => {
+          if (this.terminal) {
+            this.terminal.fit(true);
+            // 滚动到终端底部，确保输入位置可见
+            this.terminal.scrollToBottom();
+          }
+        }, 150);
+      } else {
+        // 键盘收起，恢复布局
+        app.style.height = '100%';
+
+        // 滚动页面回到顶部
+        requestAnimationFrame(() => {
+          window.scrollTo(0, 0);
+          document.body.scrollTop = 0;
+          document.documentElement.scrollTop = 0;
+        });
+
+        setTimeout(() => {
+          if (this.terminal) {
+            this.terminal.fit(true);
+            // 滚动到终端底部恢复原位
+            this.terminal.scrollToBottom();
+          }
+        }, 150);
+      }
+    };
+
+    // 监听 resize 和 scroll 事件
+    window.visualViewport.addEventListener('resize', handleViewportChange);
+    window.visualViewport.addEventListener('scroll', handleViewportChange);
+
+    // 记录以便后续清理
+    this._viewportHandler = handleViewportChange;
+
+    // 阻止页面滚动，避免键盘弹出时页面整体滚动
+    document.body.addEventListener('touchmove', (e) => {
+      if (e.target.closest('#terminal')) {
+        // 允许终端内部滚动
+        return;
+      }
+    }, { passive: false });
+  }
+
+  loadFontSize() {
+    const savedSize = localStorage.getItem('claude-remote-font-size');
+    if (savedSize) {
+      const size = parseInt(savedSize, 10);
+      if (size >= 10 && size <= 28) {
+        this.terminal.setFontSize(size);
+      }
+    }
+  }
+
+  setupFontSizeHandler() {
+    const fontSizeBtn = this.elements.fontSizeBtn;
+    if (!fontSizeBtn) return;
+
+    const fontSizes = [12, 14, 16, 18, 20];
+
+    // 创建字体选择面板
+    let panel = document.createElement('div');
+    panel.className = 'font-size-panel hidden';
+    panel.id = 'font-size-panel';
+
+    fontSizes.forEach(size => {
+      const option = document.createElement('button');
+      option.className = 'font-size-option';
+      option.dataset.size = size;
+      option.textContent = size;
+      option.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.terminal.setFontSize(size);
+        updateActiveOption(size);
+        panel.classList.add('hidden');
+      });
+      panel.appendChild(option);
+    });
+
+    // 将面板添加到 body
+    document.body.appendChild(panel);
+
+    const updateActiveOption = (currentSize) => {
+      panel.querySelectorAll('.font-size-option').forEach(opt => {
+        opt.classList.toggle('active', parseInt(opt.dataset.size, 10) === currentSize);
+      });
+    };
+
+    // 初始化当前选中的字体大小
+    updateActiveOption(this.terminal.getFontSize());
+
+    // 点击按钮切换面板
+    fontSizeBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      panel.classList.toggle('hidden');
+      updateActiveOption(this.terminal.getFontSize());
+    });
+
+    // 点击其他地方关闭面板
+    document.addEventListener('click', (e) => {
+      if (!panel.contains(e.target) && e.target !== fontSizeBtn) {
+        panel.classList.add('hidden');
+      }
+    });
+  }
+
+  async loadAIAgents() {
+    try {
+      const serverUrl = this.elements.serverUrl.value || window.location.origin;
+      const response = await fetch(`${serverUrl}/api/ai-agents`);
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        this.aiAgents = result.data;
+        this.populateAIAgentDropdown();
+      }
+    } catch (error) {
+      console.error('Failed to load AI agents:', error);
+      this.aiAgents = { claude: { name: 'Claude', path: 'claude' } };
+      this.populateAIAgentDropdown();
+    }
+  }
+
+  populateAIAgentDropdown() {
+    const select = this.elements.aiAgent;
+    const optionsContainer = this.elements.aiAgentOptions;
+    
+    select.innerHTML = '';
+    optionsContainer.innerHTML = '';
+    
+    const keys = Object.keys(this.aiAgents);
+    keys.forEach((key, index) => {
+      const option = document.createElement('option');
+      option.value = key;
+      option.textContent = this.aiAgents[key].name || key;
+      select.appendChild(option);
+      
+      const customOption = document.createElement('div');
+      customOption.className = 'custom-select-option';
+      customOption.dataset.value = key;
+      customOption.textContent = this.aiAgents[key].name || key;
+      customOption.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.selectAIAgent(key);
+      });
+      optionsContainer.appendChild(customOption);
+    });
+    
+    if (keys.length > 0) {
+      this.selectAIAgent(keys[0]);
+    }
+    
+    this.elements.aiAgentTrigger.addEventListener('click', () => {
+      this.elements.aiAgentOptions.classList.toggle('hidden');
+      this.elements.aiAgentTrigger.classList.toggle('active');
+    });
+    
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.custom-select')) {
+        this.elements.aiAgentOptions.classList.add('hidden');
+        this.elements.aiAgentTrigger.classList.remove('active');
+      }
+    });
+  }
+
+  selectAIAgent(key) {
+    const select = this.elements.aiAgent;
+    const valueSpan = this.elements.aiAgentValue;
+    const options = this.elements.aiAgentOptions.querySelectorAll('.custom-select-option');
+    
+    select.value = key;
+    valueSpan.textContent = this.aiAgents[key].name || key;
+    
+    options.forEach(opt => {
+      opt.classList.toggle('selected', opt.dataset.value === key);
+    });
+    
+    this.elements.aiAgentOptions.classList.add('hidden');
+    this.elements.aiAgentTrigger.classList.remove('active');
+  }
+
+  getAIAgentName(aiAgent) {
+    if (this.aiAgents && this.aiAgents[aiAgent]) {
+      return this.aiAgents[aiAgent].name || aiAgent;
+    }
+    return aiAgent || '-';
+  }
+
+  handleTerminalResize(cols, rows) {
+    console.log(`[App] Terminal resized: ${cols}x${rows}`);
+    if (this.wsManager && this.wsManager.isConnected) {
+      this.wsManager.sendResize(cols, rows);
+    }
+  }
+
+  handleTerminalInput(data) {
+    if (this.wsManager && this.wsManager.isConnected) {
+      const size = this.terminal.getSize();
+      this.wsManager.sendCommand(data, size.cols, size.rows);
+    }
+  }
+
+  setupEventListeners() {
+    document.querySelectorAll('.action-btn').forEach(btn => {
+      btn.setAttribute('inputmode', 'none');
+      btn.setAttribute('enterkeyhint', 'done');
+    });
+    
+    if (this.elements.settingsBtn) {
+      this.elements.settingsBtn.addEventListener('click', () => this.showSettings());
+    }
+    this.elements.closeSettings.addEventListener('click', () => this.hideSettings());
+    this.elements.settingsModal.addEventListener('click', (e) => {
+      if (e.target === this.elements.settingsModal) this.hideSettings();
+    });
+
+    this.elements.connectBtn.addEventListener('click', () => this.connect());
+    this.elements.disconnectBtn.addEventListener('click', () => this.disconnect());
+
+    this.elements.commandInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') this.sendCommand();
+    });
+
+    this.elements.quickActions.addEventListener('pointerdown', (e) => {
+      const btn = e.target.closest('.action-btn');
+      if (btn && btn.dataset.action) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        this.handleQuickAction(btn.dataset.action);
+      }
+    });
+
+    this.elements.serverUrl.addEventListener('change', () => {
+      this.saveSettings();
+      if (!this.elements.newTabCheckbox.checked) {
+        this.updateCurrentTab();
+      }
+    });
+    this.elements.authToken.addEventListener('change', () => {
+      this.saveSettings();
+      if (!this.elements.newTabCheckbox.checked) {
+        this.updateCurrentTab();
+      }
+    });
+    this.elements.workDir.addEventListener('change', () => {
+      this.saveSettings();
+      if (!this.elements.newTabCheckbox.checked) {
+        this.updateCurrentTab();
+      }
+    });
+    this.elements.aiAgent.addEventListener('change', () => {
+      this.saveSettings();
+      if (!this.elements.newTabCheckbox.checked) {
+        this.updateCurrentTab();
+      }
+    });
+    
+    this.elements.addTabBtn.addEventListener('click', () => this.addTab());
+    this.elements.terminalOverlay.addEventListener('dblclick', (e) => {
+      const overlay = this.elements.terminalOverlay;
+
+      // 检查是否点击在圆圈内
+      const unlockCircle = e.target.closest('.unlock-circle');
+      if (!unlockCircle) return;
+
+      // 立即播放涟漪效果
+      this.playRippleEffect(e);
+
+      // 然后执行解锁动画
+      // 如果是断开状态，双击重新连接
+      if (overlay.classList.contains('disconnected')) {
+        this.animateUnlock(() => {
+          this.reconnectTab(this.currentTabId);
+        });
+        return;
+      }
+
+      // 已连接但非激活状态：点亮激活
+      this.animateUnlock(() => {
+        overlay.classList.remove('active');
+        if (this.terminal) {
+          this.terminal.fit(true);
+        }
+        if (this.wsManager && this.wsManager.isConnected) {
+          const deviceType = this.wsManager.deviceType || 'desktop';
+          this.wsManager.sendActive(deviceType);
+
+          // 激活后给当前标签加锁
+          this.lockCurrentTab();
+        }
+      });
+    });
+  }
+
+  lockCurrentTab() {
+    const currentTab = this.tabs.find(t => t.id === this.currentTabId);
+    if (currentTab) {
+      currentTab.locked = true;
+      this.saveTabs();
+      this.renderTabs();
+    }
+  }
+
+  playRippleEffect(e) {
+    const overlay = this.elements.terminalOverlay;
+    const unlockCircle = overlay.querySelector('.unlock-circle');
+    const rippleContainer = overlay.querySelector('.ripple-container');
+    if (!rippleContainer || !unlockCircle) return;
+
+    // 获取圆圈的中心位置（相对于ripple-container）
+    const circleRect = unlockCircle.getBoundingClientRect();
+    const containerRect = overlay.getBoundingClientRect();
+
+    // 计算圆圈中心相对于overlay的位置
+    const centerX = circleRect.left - containerRect.left + circleRect.width / 2;
+    const centerY = circleRect.top - containerRect.top + circleRect.height / 2;
+
+    // 创建多层涟漪
+    const rippleCount = 4;
+    const baseDelay = 150;
+
+    for (let i = 0; i < rippleCount; i++) {
+      const ripple = document.createElement('div');
+      const size = 60 + i * 70;
+
+      ripple.className = `ripple ${i % 2 === 0 ? 'ripple-ring' : 'ripple-fill'}`;
+      ripple.style.width = `${size}px`;
+      ripple.style.height = `${size}px`;
+      ripple.style.left = `${centerX - size / 2}px`;
+      ripple.style.top = `${centerY - size / 2}px`;
+      ripple.style.animationDelay = `${i * baseDelay}ms`;
+
+      rippleContainer.appendChild(ripple);
+
+      // 动画结束后移除元素
+      ripple.addEventListener('animationend', () => {
+        ripple.remove();
+      });
+    }
+  }
+
+  animateUnlock(callback) {
+    console.log('[动画调试] animateUnlock 被调用', {
+      tabId: this.currentTabId,
+      timestamp: Date.now(),
+      stack: new Error().stack
+    });
+
+    const overlay = this.elements.terminalOverlay;
+    const unlockCircle = overlay.querySelector('.unlock-circle');
+    const wasDisconnected = overlay.classList.contains('disconnected');
+    const wasActive = overlay.classList.contains('active');
+    const triggeredTabId = this.currentTabId;  // 记录触发动画时的标签ID
+
+    console.log('[动画调试] animateUnlock 状态', {
+      wasDisconnected,
+      wasActive,
+      triggeredTabId
+    });
+
+    // 先让圆圈淡出，涟漪继续播放
+    if (unlockCircle) {
+      console.log('[动画调试] 设置圆圈淡出样式');
+      unlockCircle.style.transition = 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+      unlockCircle.style.opacity = '0';
+      unlockCircle.style.transform = 'scale(1.5)';
+    }
+
+    // 涟漪播放完成后执行回调
+    setTimeout(() => {
+      console.log('[动画调试] setTimeout 回调执行', {
+        currentTabId: this.currentTabId,
+        triggeredTabId,
+        sameTab: this.currentTabId === triggeredTabId
+      });
+
+      // 如果已经切换到其他标签，不执行任何操作
+      if (this.currentTabId !== triggeredTabId) return;
+
+      if (callback) callback();
+
+      // 只在状态未改变时（连接失败等）才重置圆圈样式
+      const stillDisconnected = overlay.classList.contains('disconnected');
+      const stillActive = overlay.classList.contains('active');
+
+      console.log('[动画调试] 检查是否重置样式', {
+        stillDisconnected,
+        stillActive,
+        willReset: stillDisconnected === wasDisconnected && stillActive === wasActive
+      });
+
+      // 只在蒙版仍然显示时重置样式（连接失败的情况）
+      // 连接成功时蒙版已隐藏，不需要重置
+      if (unlockCircle && stillDisconnected && !stillActive) {
+        console.log('[动画调试] 重置圆圈样式（callback后）');
+        unlockCircle.style.transition = '';
+        unlockCircle.style.opacity = '';
+        unlockCircle.style.transform = '';
+      }
+    }, 800);
+  }
+
+  toggleTabLock(tabId) {
+    const tab = this.tabs.find(t => t.id === tabId);
+    if (!tab) return;
+
+    tab.locked = tab.locked === false ? true : false;
+    this.saveTabs();
+    this.renderTabs();
+  }
+
+  showTabLockHint(tabId) {
+    const tabBtn = this.elements.tabsList.querySelector(`[data-tab-id="${tabId}"]`);
+    if (!tabBtn) return;
+
+    const lockBtn = tabBtn.querySelector('.tab-lock');
+    if (lockBtn) {
+      lockBtn.classList.add('shake');
+      setTimeout(() => lockBtn.classList.remove('shake'), 500);
+    }
+
+    // 显示无感提示
+    const hint = document.createElement('span');
+    hint.className = 'tab-close-hint';
+    hint.textContent = '先解锁';
+    tabBtn.appendChild(hint);
+
+    setTimeout(() => {
+      hint.classList.add('fade-out');
+      setTimeout(() => hint.remove(), 300);
+    }, 1000);
+  }
+
+  async connect() {
+    const serverUrl = this.elements.serverUrl.value.trim() || window.location.origin.replace(/^http/, 'ws');
+    const token = this.elements.authToken.value.trim();
+    const workDir = this.elements.workDir.value.trim().replace(/\\/g, '/').toLowerCase();
+    const aiAgent = this.elements.aiAgent.value;
+    const createNewTab = this.elements.newTabCheckbox.checked;
+
+    if (!token) {
+      alert('请输入Token');
+      return;
+    }
+
+    if (!workDir) {
+      alert('请输入工作目录');
+      return;
+    }
+
+    try {
+      let apiUrl = serverUrl.replace(/^ws:\/\//i, 'http://').replace(/^wss:\/\//i, 'https://');
+      const response = await fetch(`${apiUrl}/api/validate-directory`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ directory: workDir })
+      });
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        alert(`目录验证失败: ${result.error || '未知错误'}`);
+        return;
+      }
+    } catch (error) {
+      alert(`目录验证失败: ${error.message}`);
+      return;
+    }
+
+    if (createNewTab) {
+      const newTab = {
+        id: Date.now().toString(),
+        name: this.getAIAgentName(aiAgent),
+        serverUrl,
+        token,
+        workDir,
+        aiAgent,
+        terminalHistory: [],
+        locked: true
+      };
+      
+      this.tabs.push(newTab);
+      this.saveTabs();
+      this.currentTabId = newTab.id;
+      this.renderTabs();
+      this.loadCurrentTabSettings();
+    }
+
+    this.saveSettings();
+    this.currentAiAgent = aiAgent;
+    this.terminal.setAIAgent(aiAgent);
+    this.updateConnectionUI(false, true);
+    this.elements.statusText.textContent = '连接中...';
+
+    try {
+      const wsManager = new WebSocketManager();
+      
+      wsManager.on('output', (data) => {
+        if (this.currentTabId === this.getCurrentTabIdForWs(wsManager)) {
+          console.log('[App] Received output:', data?.content?.substring(0, 100));
+          if (data.content) this.terminal.write(data.content);
+        }
+      });
+
+      wsManager.on('status', (data) => {
+        this.handleStatus(data);
+      });
+
+      wsManager.on('control', (data) => {
+        if (this.currentTabId === this.getCurrentTabIdForWs(wsManager)) {
+          this.handleControl(data);
+        }
+      });
+
+      wsManager.on('disconnected', () => {
+        const tabId = this.getCurrentTabIdForWs(wsManager);
+        if (tabId) {
+          const connection = this.tabConnections.get(tabId);
+          if (connection) {
+            connection.isConnected = false;
+            this.tabConnections.set(tabId, connection);
+            this.renderTabs();
+          }
+        }
+        
+        if (this.currentTabId === tabId) {
+          this.updateConnectionUI(false);
+          this.desktopDisconnected = false;
+        }
+      });
+
+      const message = await wsManager.connect(serverUrl, token, workDir, aiAgent);
+      
+      this.tabConnections.set(this.currentTabId, {
+        wsManager,
+        isConnected: true,
+        serverUrl,
+        token,
+        workDir: workDir.toLowerCase(),
+        aiAgent
+      });
+      
+      this.terminal.fit(true);
+      const size = this.terminal.getSize();
+      console.log(`[App] Sending initial resize immediately: ${size.cols}x${size.rows}`);
+      wsManager.sendResize(size.cols, size.rows);
+      
+      this.updateConnectionUI(true);
+      this.terminal.setConnected(true);
+      this.elements.inputArea.classList.add('hidden-input');
+      
+      this.saveWorkDirHistory(workDir);
+      
+      this.updateSessionInfo(aiAgent, workDir, message.deviceId, true);
+      
+      this.renderTabs();
+
+      this.updateCurrentTab();
+
+      // 连接成功后给当前标签加锁
+      this.lockCurrentTab();
+
+      if (message.data?.history?.length > 0) {
+        const currentTab = this.tabs.find(t => t.id === this.currentTabId);
+        if (currentTab) {
+          this.terminal.clear();
+          
+          currentTab.terminalHistory = message.data.history
+            .map(item => ({
+              content: item.data?.content || '',
+              type: 'default'
+            }))
+            .filter(item => {
+              const content = item.content || '';
+              return !content.includes('[远程控制已连接]') && 
+                     !content.includes('已断开连接') &&
+                     !content.includes('连接成功！') &&
+                     !content.includes('工作目录:') &&
+                     !content.includes('AI Agent:') &&
+                     !content.includes('设备ID:') &&
+                     !content.includes('加载') &&
+                     !content.includes('桌面客户端');
+            });
+          this.saveTabs();
+          
+          message.data.history.forEach(item => {
+            if (item.data?.content) {
+              const content = item.data.content;
+              if (!content.includes('[远程控制已连接]') && 
+                  !content.includes('已断开连接') &&
+                  !content.includes('连接成功！') &&
+                  !content.includes('工作目录:') &&
+                  !content.includes('AI Agent:') &&
+                  !content.includes('设备ID:') &&
+                  !content.includes('加载') &&
+                  !content.includes('桌面客户端')) {
+                this.terminal.write(content);
+              }
+            }
+          });
+        }
+      }
+      
+      this.updateCurrentTab();
+      this.hideSettings();
+    } catch (error) {
+      this.updateConnectionUI(false);
+      this.terminal.write(`连接失败: ${error.message || '未知错误'}`, 'error');
+    }
+  }
+
+  getCurrentTabIdForWs(wsManager) {
+    for (const [tabId, connection] of this.tabConnections.entries()) {
+      if (connection.wsManager === wsManager) {
+        return tabId;
+      }
+    }
+    return null;
+  }
+
+  disconnect() {
+    const connection = this.tabConnections.get(this.currentTabId);
+    if (connection && connection.isConnected) {
+      connection.wsManager.disconnect();
+      connection.isConnected = false;
+      this.tabConnections.set(this.currentTabId, connection);
+      this.renderTabs();
+    }
+    this.terminal.setConnected(false);
+    this.elements.inputArea.classList.remove('hidden-input');
+    this.updateConnectionUI(false);
+    this.updateSessionInfo('', '');
+    this.saveCurrentTabTerminal();
+  }
+
+  sendCommand() {
+    const input = this.elements.commandInput.value;
+    if (!input) return;
+
+    const size = this.terminal.getSize();
+    if (this.wsManager && this.wsManager.sendCommand(input + '\n', size.cols, size.rows)) {
+      this.elements.commandInput.value = '';
+    } else {
+      this.terminal.write('未连接到服务器', 'error');
+    }
+  }
+
+  handleQuickAction(action) {
+    if (!this.wsManager) {
+      this.terminal.write('未连接到服务器', 'error');
+      this.elements.quickActions.classList.remove('expanded');
+      return;
+    }
+
+    const size = this.terminal.getSize();
+    
+    switch (action) {
+      case 'clear-screen':
+        this.terminal.clear();
+        break;
+      case 'enter':
+        this.wsManager.sendCommand('\n', size.cols, size.rows);
+        break;
+      case 'esc':
+        this.wsManager.sendCommand('\x1b', size.cols, size.rows);
+        break;
+      case 'backspace':
+        this.wsManager.sendCommand('\x08', size.cols, size.rows);
+        break;
+      case 'tab':
+        this.wsManager.sendCommand('\t', size.cols, size.rows);
+        break;
+      case 'up':
+        this.wsManager.sendCommand('\x1b[A', size.cols, size.rows);
+        break;
+      case 'down':
+        this.wsManager.sendCommand('\x1b[B', size.cols, size.rows);
+        break;
+      case 'left':
+        this.wsManager.sendCommand('\x1b[D', size.cols, size.rows);
+        break;
+      case 'right':
+        this.wsManager.sendCommand('\x1b[C', size.cols, size.rows);
+        break;
+      case 'toggle-shortcuts':
+        this.elements.quickActions.classList.toggle('expanded');
+        return;
+      case 'ctrl-c':
+        this.wsManager.sendCommand('\x03', size.cols, size.rows);
+        this.terminal.write('^C', 'info');
+        break;
+      case 'ctrl-d':
+        this.wsManager.sendCommand('\x04', size.cols, size.rows);
+        this.terminal.write('^D', 'info');
+        break;
+      case 'ctrl-o':
+        this.wsManager.sendCommand('\x0f', size.cols, size.rows);
+        this.terminal.write('^O', 'info');
+        break;
+      case 'ctrl-z':
+        this.wsManager.sendCommand('\x1a', size.cols, size.rows);
+        this.terminal.write('^Z', 'info');
+        break;
+      case 'num-1':
+        this.wsManager.sendCommand('1', size.cols, size.rows);
+        break;
+      case 'num-2':
+        this.wsManager.sendCommand('2', size.cols, size.rows);
+        break;
+      case 'num-3':
+        this.wsManager.sendCommand('3', size.cols, size.rows);
+        break;
+      case 'num-4':
+        this.wsManager.sendCommand('4', size.cols, size.rows);
+        break;
+      case 'num-5':
+        this.wsManager.sendCommand('5', size.cols, size.rows);
+        break;
+      case 'num-6':
+        this.wsManager.sendCommand('6', size.cols, size.rows);
+        break;
+      case 'num-7':
+        this.wsManager.sendCommand('7', size.cols, size.rows);
+        break;
+      case 'num-8':
+        this.wsManager.sendCommand('8', size.cols, size.rows);
+        break;
+      case 'num-9':
+        this.wsManager.sendCommand('9', size.cols, size.rows);
+        break;
+      case 'bash-mode':
+        this.wsManager.sendCommand('!', size.cols, size.rows);
+        break;
+      case 'slash':
+        this.wsManager.sendCommand('/', size.cols, size.rows);
+        break;
+      case 'at':
+        this.wsManager.sendCommand('@', size.cols, size.rows);
+        break;
+      case 'ampersand':
+        this.wsManager.sendCommand('&', size.cols, size.rows);
+        break;
+      case 'shift-tab':
+        this.wsManager.sendCommand('\x1b[Z', size.cols, size.rows);
+        break;
+      case 'ctrl-t':
+        this.wsManager.sendCommand('\x14', size.cols, size.rows);
+        break;
+      case 'newline':
+        this.wsManager.sendCommand('\x0d', size.cols, size.rows);
+        break;
+      case 'ctrl-shift-minus':
+        this.wsManager.sendCommand('\x1f', size.cols, size.rows);
+        break;
+      case 'alt-v':
+        this.wsManager.sendCommand('\x16', size.cols, size.rows);
+        break;
+      case 'meta-p':
+        this.wsManager.sendCommand('\x10', size.cols, size.rows);
+        break;
+      case 'meta-o':
+        this.wsManager.sendCommand('\x0f', size.cols, size.rows);
+        break;
+      case 'ctrl-s':
+        this.wsManager.sendCommand('\x13', size.cols, size.rows);
+        break;
+      case 'ctrl-g':
+        this.wsManager.sendCommand('\x07', size.cols, size.rows);
+        break;
+    }
+    
+    this.elements.quickActions.classList.remove('expanded');
+  }
+
+  handleStatus(data) {
+    if (data.deviceType === 'desktop') {
+      if (data.status === STATUS.CONNECTED) {
+        this.desktopDisconnected = false;
+      } else if (data.status === STATUS.DISCONNECTED) {
+        this.desktopDisconnected = true;
+      }
+    } else if (data.deviceType === 'mobile') {
+      const sessionKey = data.sessionId;
+      if (data.status === STATUS.DISCONNECTED) {
+        for (const [tabId, connection] of this.tabConnections.entries()) {
+          const connectionSessionKey = `${connection.aiAgent}:${connection.workDir.toLowerCase()}`;
+          if (connectionSessionKey === sessionKey) {
+            connection.isConnected = false;
+            this.tabConnections.set(tabId, connection);
+            this.renderTabs();
+            
+            if (this.currentTabId === tabId) {
+              this.updateConnectionUI(false);
+            }
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  handleControl(data) {
+    if (data.action === 'switch_device') {
+      this.terminal.write(`设备切换: ${data.activeDevice}`, 'info');
+    }
+    if (data.action === 'showOverlay') {
+      // 已连接但非激活状态：显示"点亮激活"蒙版
+      const overlay = this.elements.terminalOverlay;
+      const overlayText = overlay.querySelector('.overlay-text');
+      overlay.classList.remove('disconnected', 'unlocking');
+      overlay.classList.add('active');
+      if (overlayText) overlayText.textContent = '点亮激活';
+    }
+  }
+
+  updateConnectionUI(connected, connecting = false) {
+    console.log('[动画调试] updateConnectionUI 被调用', {
+      connected,
+      connecting,
+      tabId: this.currentTabId,
+      timestamp: Date.now(),
+      stack: new Error().stack.split('\n').slice(0, 5).join('\n')
+    });
+
+    this.elements.sessionStatusDot.className = 'status-dot';
+    this.elements.commandInput.disabled = !connected;
+
+    // 管理断开状态蒙版
+    const overlay = this.elements.terminalOverlay;
+    const overlayText = overlay.querySelector('.overlay-text');
+
+    if (connected) {
+      overlay.classList.remove('disconnected', 'unlocking');
+      this.elements.sessionStatusDot.classList.add('connected');
+      const wsManager = this.wsManager;
+      const mode = wsManager?.connectionMode || 'relay';
+      const modeText = mode === 'direct' ? 'P2P直连' : '中转连接';
+      this.elements.sessionStatusText.textContent = '已连接';
+      this.elements.sessionStatusText.style.color = '#00ff00';
+      this.elements.connectBtn.classList.add('hidden');
+      this.elements.disconnectBtn.classList.remove('hidden');
+    } else if (connecting) {
+      overlay.classList.remove('disconnected', 'unlocking');
+      this.elements.sessionStatusDot.classList.add('connecting');
+      this.elements.sessionStatusText.textContent = '连接中...';
+    } else {
+      // 断开状态：先重置样式，再显示蒙版（避免动画残留）
+      const unlockCircle = overlay.querySelector('.unlock-circle');
+      if (unlockCircle) {
+        console.log('[动画调试] updateConnectionUI 重置圆圈样式（断开状态，在显示蒙版前）');
+        unlockCircle.style.transition = 'none';
+        unlockCircle.style.opacity = '1';
+        unlockCircle.style.transform = 'scale(1)';
+        // 强制重排，确保样式立即应用
+        void unlockCircle.offsetWidth;
+        unlockCircle.style.transition = '';
+      }
+
+      // 现在再显示蒙版（此时圆圈样式已正确）
+      overlay.classList.remove('active', 'unlocking');
+      overlay.classList.add('disconnected');
+      if (overlayText) overlayText.textContent = '已断开';
+
+      this.elements.sessionStatusText.textContent = '已断开';
+      this.elements.sessionStatusText.style.color = '#ff0000';
+      this.elements.connectBtn.classList.remove('hidden');
+      this.elements.disconnectBtn.classList.add('hidden');
+    }
+  }
+
+  updateSessionInfo(aiAgent, workDir, deviceId = '', connected = false) {
+    this.elements.currentWorkDir.textContent = workDir || '-';
+  }
+
+  loadTabs() {
+    const saved = localStorage.getItem('claude-remote-tabs');
+    return saved ? JSON.parse(saved) : [];
+  }
+
+  saveTabs() {
+    localStorage.setItem('claude-remote-tabs', JSON.stringify(this.tabs));
+  }
+
+  renderTabs() {
+    this.elements.tabsList.innerHTML = '';
+
+    this.tabs.forEach(tab => {
+      const connection = this.tabConnections.get(tab.id);
+      const isConnected = connection && connection.isConnected;
+      const isLocked = tab.locked !== false; // 默认锁定
+
+      const tabBtn = document.createElement('button');
+      tabBtn.className = `tab-btn ${tab.id === this.currentTabId ? 'active' : ''} ${isConnected ? 'connected' : ''} ${isLocked ? 'locked' : ''}`;
+      tabBtn.dataset.tabId = tab.id;
+
+      const label = document.createElement('span');
+      label.className = 'tab-label';
+      const agentName = this.getAIAgentName(tab.aiAgent);
+      label.textContent = tab.name || agentName;
+
+      const lockBtn = document.createElement('span');
+      lockBtn.className = `tab-lock ${isLocked ? 'locked' : 'unlocked'}`;
+      if (isLocked) {
+        lockBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>';
+        lockBtn.title = '点击解锁后可关闭';
+      } else {
+        lockBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h1.9c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10z"/></svg>';
+        lockBtn.title = '已解锁，可关闭';
+      }
+      lockBtn.onclick = (e) => {
+        e.stopPropagation();
+        this.toggleTabLock(tab.id);
+      };
+
+      const closeBtn = document.createElement('span');
+      closeBtn.className = 'tab-close';
+      closeBtn.innerHTML = '&times;';
+      closeBtn.onclick = (e) => {
+        e.stopPropagation();
+        this.closeTab(tab.id);
+      };
+
+      tabBtn.appendChild(lockBtn);
+      tabBtn.appendChild(label);
+      tabBtn.appendChild(closeBtn);
+      tabBtn.onclick = () => this.switchTab(tab.id);
+
+      this.elements.tabsList.appendChild(tabBtn);
+    });
+  }
+
+  toggleTabLock(tabId) {
+    const tab = this.tabs.find(t => t.id === tabId);
+    if (!tab) return;
+
+    tab.locked = tab.locked === false ? true : false;
+    this.saveTabs();
+    this.renderTabs();
+  }
+
+  loadCurrentTabSettings() {
+    if (!this.currentTabId) return;
+    
+    const currentTab = this.tabs.find(t => t.id === this.currentTabId);
+    if (currentTab) {
+      this.elements.serverUrl.value = currentTab.serverUrl || '';
+      this.elements.authToken.value = currentTab.token || '';
+      this.elements.workDir.value = currentTab.workDir || '';
+      this.elements.aiAgent.value = currentTab.aiAgent || 'claude';
+      this.updateSessionInfo(currentTab.aiAgent, currentTab.workDir);
+    }
+  }
+
+  addTab() {
+    this.showSettings();
+  }
+
+  switchTab(tabId) {
+    if (this.currentTabId === tabId) return;
+    
+    this.saveCurrentTabTerminal();
+    
+    this.currentTabId = tabId;
+    this.renderTabs();
+    this.loadCurrentTabSettings();
+    this.loadCurrentTabTerminal();
+    
+    const connection = this.tabConnections.get(tabId);
+    if (connection && connection.isConnected) {
+      this.updateConnectionUI(true);
+      this.terminal.fit(true);
+      const size = this.terminal.getSize();
+      console.log(`[App] SwitchTab: sending resize ${size.cols}x${size.rows}`);
+      connection.wsManager.sendResize(size.cols, size.rows);
+    } else {
+      this.updateConnectionUI(false);
+    }
+  }
+
+  reconnectTab(tabId) {
+    const tab = this.tabs.find(t => t.id === tabId);
+    if (!tab) return;
+    
+    this.switchTab(tabId);
+    
+    const originalChecked = this.elements.newTabCheckbox.checked;
+    this.elements.newTabCheckbox.checked = false;
+    this.connect();
+    this.elements.newTabCheckbox.checked = originalChecked;
+  }
+
+  closeTab(tabId) {
+    const tab = this.tabs.find(t => t.id === tabId);
+    if (!tab) return;
+
+    // 检查是否锁定
+    if (tab.locked !== false) {
+      this.showTabLockHint(tabId);
+      return;
+    }
+
+    const connection = this.tabConnections.get(tabId);
+    if (connection && connection.isConnected) {
+      connection.wsManager.disconnect();
+    }
+    this.tabConnections.delete(tabId);
+
+    if (this.currentTabId === tabId) {
+      const currentIndex = this.tabs.findIndex(t => t.id === tabId);
+      const newIndex = currentIndex > 0 ? currentIndex - 1 : (this.tabs.length > 1 ? 1 : 0);
+      if (this.tabs.length > 1) {
+        this.currentTabId = this.tabs[newIndex]?.id || this.tabs[0]?.id;
+      } else {
+        this.currentTabId = null;
+      }
+    }
+
+    this.tabs = this.tabs.filter(t => t.id !== tabId);
+    this.saveTabs();
+    this.renderTabs();
+    this.loadCurrentTabSettings();
+  }
+
+  showTabLockHint(tabId) {
+    const tabBtn = this.elements.tabsList.querySelector(`[data-tab-id="${tabId}"]`);
+    if (!tabBtn) return;
+
+    const lockBtn = tabBtn.querySelector('.tab-lock');
+    if (lockBtn) {
+      lockBtn.classList.add('shake');
+      setTimeout(() => lockBtn.classList.remove('shake'), 500);
+    }
+
+    // 显示无感提示
+    const hint = document.createElement('span');
+    hint.className = 'tab-close-hint';
+    hint.textContent = '先解锁';
+    tabBtn.appendChild(hint);
+
+    setTimeout(() => {
+      hint.classList.add('fade-out');
+      setTimeout(() => hint.remove(), 300);
+    }, 1000);
+  }
+
+  updateCurrentTab() {
+    if (!this.currentTabId) return;
+    
+    const currentTab = this.tabs.find(t => t.id === this.currentTabId);
+    if (currentTab) {
+      currentTab.serverUrl = this.elements.serverUrl.value.trim();
+      currentTab.token = this.elements.authToken.value.trim();
+      currentTab.workDir = this.elements.workDir.value.trim();
+      currentTab.aiAgent = this.elements.aiAgent.value;
+      
+      const agentName = this.getAIAgentName(currentTab.aiAgent);
+      currentTab.name = agentName;
+      
+      this.saveTabs();
+      this.renderTabs();
+    }
+  }
+
+  saveCurrentTabTerminal() {
+    if (!this.currentTabId) return;
+    
+    const currentTab = this.tabs.find(t => t.id === this.currentTabId);
+    if (currentTab && this.terminal) {
+      currentTab.terminalHistory = this.terminal.getHistory();
+      this.saveTabs();
+    }
+  }
+
+  loadCurrentTabTerminal() {
+    if (!this.currentTabId) return;
+    
+    const currentTab = this.tabs.find(t => t.id === this.currentTabId);
+    if (currentTab && this.terminal) {
+      this.terminal.clear();
+      if (currentTab.terminalHistory && currentTab.terminalHistory.length > 0) {
+        currentTab.terminalHistory.forEach(line => {
+          const content = line.content || '';
+          if (!content.includes('[远程控制已连接]') && 
+              !content.includes('已断开连接') &&
+              !content.includes('连接成功！') &&
+              !content.includes('工作目录:') &&
+              !content.includes('AI Agent:') &&
+              !content.includes('设备ID:') &&
+              !content.includes('加载') &&
+              !content.includes('桌面客户端')) {
+            this.terminal.write(line.content, line.type || 'default');
+          }
+        });
+      }
+    }
+  }
+
+  showSettings() {
+    this.elements.settingsModal.classList.remove('hidden');
+    this.elements.connectBtn.classList.remove('hidden');
+    this.elements.disconnectBtn.classList.add('hidden');
+    // 隐藏蒙版，避免遮挡设置框
+    this.elements.terminalOverlay.classList.remove('disconnected', 'active');
+  }
+  hideSettings() {
+    this.elements.settingsModal.classList.add('hidden');
+    // 如果当前标签未连接，恢复显示断开蒙版
+    const connection = this.tabConnections.get(this.currentTabId);
+    const isConnected = connection && connection.isConnected;
+    if (!isConnected) {
+      this.elements.terminalOverlay.classList.add('disconnected');
+    }
+  }
+
+  checkAuth() {
+    const authPassword = document.getElementById('auth-password');
+    const authScreen = document.getElementById('auth-screen');
+    const app = document.getElementById('app');
+    
+    const isAuthenticated = localStorage.getItem('claude-remote-authenticated');
+    
+    if (isAuthenticated === 'true') {
+      authScreen.classList.add('hidden');
+      app.classList.remove('hidden');
+      return true;
+    }
+    
+    authPassword.focus();
+    
+    const handleAuth = (e) => {
+      if (e.key === 'Enter') {
+        const password = authPassword.value;
+        
+        fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            localStorage.setItem('claude-remote-authenticated', 'true');
+            authScreen.classList.add('hidden');
+            app.classList.remove('hidden');
+            authPassword.removeEventListener('keypress', handleAuth);
+            this.init().catch(err => console.error('Init error:', err));
+          } else {
+            authPassword.value = '';
+          }
+        })
+        .catch(err => {
+          console.error('Auth error:', err);
+          authPassword.value = '';
+        });
+      }
+    };
+    
+    authPassword.addEventListener('keypress', handleAuth);
+    return false;
+  }
+
+  loadSettings() {
+    const saved = localStorage.getItem('claude-remote-settings');
+    return saved ? JSON.parse(saved) : { serverUrl: '', token: '', workDir: '', aiAgent: 'claude' };
+  }
+
+  saveSettings() {
+    this.settings = {
+      serverUrl: this.elements.serverUrl.value.trim(),
+      token: this.elements.authToken.value.trim(),
+      workDir: this.elements.workDir.value.trim(),
+      aiAgent: this.elements.aiAgent.value
+    };
+    localStorage.setItem('claude-remote-settings', JSON.stringify(this.settings));
+  }
+
+  loadSettingsToForm() {
+    this.elements.serverUrl.value = this.settings.serverUrl || '';
+    this.elements.authToken.value = this.settings.token || '';
+    this.elements.workDir.value = this.settings.workDir || '';
+    this.elements.aiAgent.value = this.settings.aiAgent || 'claude';
+  }
+
+  loadWorkDirHistory() {
+    const history = JSON.parse(localStorage.getItem('claude-remote-work-dir-history') || '[]');
+    const dropdown = document.getElementById('work-dir-dropdown');
+    dropdown.innerHTML = '';
+    
+    history.forEach(dir => {
+      const item = document.createElement('div');
+      item.className = 'dropdown-item';
+      item.textContent = dir;
+      item.addEventListener('click', () => {
+        this.elements.workDir.value = dir;
+        this.hideWorkDirDropdown();
+      });
+      dropdown.appendChild(item);
+    });
+    
+    if (!this.workDirDropdownSetup) {
+      this.setupWorkDirDropdownEvents();
+      this.workDirDropdownSetup = true;
+    }
+  }
+
+  setupWorkDirDropdownEvents() {
+    const workDirInput = this.elements.workDir;
+    const dropdown = document.getElementById('work-dir-dropdown');
+    
+    workDirInput.addEventListener('focus', () => {
+      this.showWorkDirDropdown();
+    });
+    
+    workDirInput.addEventListener('input', () => {
+      this.filterWorkDirDropdown(workDirInput.value);
+    });
+    
+    document.addEventListener('click', (e) => {
+      if (!workDirInput.contains(e.target) && !dropdown.contains(e.target)) {
+        this.hideWorkDirDropdown();
+      }
+    });
+  }
+
+  showWorkDirDropdown() {
+    const dropdown = document.getElementById('work-dir-dropdown');
+    dropdown.classList.remove('hidden');
+  }
+
+  hideWorkDirDropdown() {
+    const dropdown = document.getElementById('work-dir-dropdown');
+    dropdown.classList.add('hidden');
+  }
+
+  filterWorkDirDropdown(filterText) {
+    const dropdown = document.getElementById('work-dir-dropdown');
+    const items = dropdown.querySelectorAll('.dropdown-item');
+    const filter = filterText.toLowerCase();
+    
+    items.forEach(item => {
+      const text = item.textContent.toLowerCase();
+      if (text.includes(filter)) {
+        item.style.display = 'block';
+      } else {
+        item.style.display = 'none';
+      }
+    });
+    
+    this.validateWorkDir(filterText);
+  }
+
+  async validateWorkDir(directory) {
+    const validationEl = document.getElementById('work-dir-validation');
+    const iconEl = validationEl.querySelector('.validation-icon');
+    const messageEl = validationEl.querySelector('.validation-message');
+    
+    if (!directory || directory.trim() === '') {
+      validationEl.classList.add('hidden');
+      return;
+    }
+    
+    validationEl.classList.remove('hidden', 'valid', 'invalid');
+    validationEl.classList.add('validating');
+    messageEl.textContent = '正在验证目录...';
+    
+    try {
+      let serverUrl = this.elements.serverUrl.value || window.location.origin;
+      serverUrl = serverUrl.replace(/^ws:\/\//i, 'http://').replace(/^wss:\/\//i, 'https://');
+      const response = await fetch(`${serverUrl}/api/validate-directory`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ directory: directory.trim() })
+      });
+      
+      const result = await response.json();
+      
+      validationEl.classList.remove('validating');
+      
+      if (result.success) {
+        validationEl.classList.add('valid');
+        messageEl.textContent = result.message || '目录有效';
+      } else {
+        validationEl.classList.add('invalid');
+        messageEl.textContent = result.error || '目录验证失败';
+      }
+    } catch (error) {
+      validationEl.classList.remove('validating');
+      validationEl.classList.add('invalid');
+      messageEl.textContent = '验证失败: ' + error.message;
+    }
+  }
+
+  saveWorkDirHistory(workDir) {
+    if (!workDir || workDir.trim() === '') {
+      return;
+    }
+    
+    const history = JSON.parse(localStorage.getItem('claude-remote-work-dir-history') || '[]');
+    const cleanDir = workDir.trim();
+    
+    const index = history.indexOf(cleanDir);
+    if (index > -1) {
+      history.splice(index, 1);
+    }
+    
+    history.unshift(cleanDir);
+    
+    const maxHistory = 10;
+    if (history.length > maxHistory) {
+      history.splice(maxHistory);
+    }
+    
+    localStorage.setItem('claude-remote-work-dir-history', JSON.stringify(history));
+    this.loadWorkDirHistory();
+  }
+}
+
+window.__app = new App();

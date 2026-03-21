@@ -1,0 +1,43 @@
+# 依赖
+node_modules/
+package-lock.json
+
+# 日志
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 环境变量（包含敏感信息）
+.env
+.secret
+
+# 配置文件（包含敏感信息，用户从 example 复制）
+config.json
+
+# 进程锁文件（运行时生成）
+*.lock
+server.lock
+session-manager.lock
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 临时文件
+*.tmp
+*.temp
+
+# 截图文件（开发用）
+*.png
+
+# Claude Code 项目文件
+.claude/

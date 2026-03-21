@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Claude Remote Control</title>
+  <!-- CSS: 主题 -> 基础 -> 组件 -> 特效 -> 模态框 -> 终端 -->
+  <link rel="stylesheet" href="/css/themes/dark.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/overlay.css">
+  <link rel="stylesheet" href="/css/modal.css">
+  <link rel="stylesheet" href="/css/xterm.css">
+</head>
+<body>
+  <div id="auth-screen">
+    <input type="password" id="auth-password" autocomplete="off" autocapitalize="off">
+  </div>
+
+  <div id="app" class="hidden">
+    <div id="header">
+      <div class="header-left">
+        <span id="connection-status" class="status-dot disconnected" style="display: none;"></span>
+        <span id="status-text" style="display: none;">未连接</span>
+      </div>
+    </div>
+
+    <div id="tabs-container">
+      <div id="tabs-list"></div>
+      <div class="tabs-actions">
+        <button id="add-tab-btn" class="icon-btn" title="新建标签">+</button>
+        <a href="/admin" class="icon-btn settings-btn" title="系统设置">⛏</a>
+      </div>
+    </div>
+
+    <div id="session-info">
+      <div class="info-item">
+        <span id="session-status-dot" class="status-dot disconnected"></span>
+        <span id="session-status-text" class="info-label">已断开</span>
+      </div>
+      <div class="info-item" id="work-dir-container">
+        <span class="info-label">工作目录:</span>
+        <span id="current-work-dir" class="info-value">-</span>
+      </div>
+    </div>
+
+    <div id="terminal-container">
+      <div id="terminal"></div>
+      <div id="terminal-overlay" class="terminal-overlay">
+        <div class="overlay-content">
+          <div class="unlock-circle">
+            <svg viewBox="0 0 120 120" class="rotating-circle">
+              <circle cx="60" cy="60" r="54" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="8 6"/>
+            </svg>
+            <span class="overlay-text">已断开</span>
+          </div>
+          <div class="ripple-container"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="input-area">
+      <div id="input-wrapper">
+        <input type="text" id="command-input" placeholder="输入命令..." autocomplete="off" autocapitalize="off" disabled>
+      </div>
+      <div id="quick-actions">
+        <div class="action-group frequently-used">
+          <span class="action-btn" data-action="esc" title="退出/取消">ESC</span>
+          <span class="action-btn" data-action="toggle-shortcuts" title="展开更多">⌨️</span>
+        </div>
+        <div class="action-group frequently-used num-group">
+          <span class="action-btn" data-action="num-1">1</span>
+          <span class="action-btn" data-action="num-2">2</span>
+        </div>
+        <div class="action-group frequently-used">
+          <span class="action-btn" data-action="num-3">3</span>
+          <span class="action-btn" data-action="num-4">4</span>
+          <span class="action-btn arrow" data-action="up" title="上一条命令">↑</span>
+          <span class="action-btn arrow" data-action="down" title="下一条命令">↓</span>
+          <span class="action-btn arrow" data-action="left" title="左移">←</span>
+          <span class="action-btn arrow" data-action="right" title="右移">→</span>
+          <span class="action-btn" id="font-size-btn" title="调整字体">Aa</span>
+        </div>
+        <div class="action-group frequently-used right-group">
+          <span class="action-btn" data-action="backspace" title="退格">⌫</span>
+          <span class="action-btn" data-action="enter" title="回车">Enter</span>
+        </div>
+        <div class="action-group">
+          <span class="action-btn" data-action="clear-screen" title="清屏">清屏</span>
+          <span class="action-btn" data-action="tab" title="自动补全">TAB</span>
+        </div>
+        <div class="action-group">
+          <span class="action-btn" data-action="ctrl-c" title="中断">Ctrl+C</span>
+          <span class="action-btn" data-action="ctrl-d" title="退出">Ctrl+D</span>
+          <span class="action-btn" data-action="ctrl-o" title="选项">Ctrl+O</span>
+          <span class="action-btn" data-action="ctrl-z" title="撤销">Ctrl+Z</span>
+        </div>
+        <div class="action-group">
+          <span class="action-btn" data-action="ctrl-t" title="切换任务">Ctrl+T</span>
+          <span class="action-btn" data-action="ctrl-s" title="暂存">Ctrl+S</span>
+          <span class="action-btn" data-action="ctrl-g" title="编辑器">Ctrl+G</span>
+        </div>
+        <div class="action-group">
+          <span class="action-btn" data-action="ctrl-shift-minus" title="撤销">Ctrl+Shift+-</span>
+          <span class="action-btn" data-action="alt-v" title="粘贴图片">Alt+V</span>
+          <span class="action-btn" data-action="meta-p" title="切换模型">Meta+P</span>
+          <span class="action-btn" data-action="meta-o" title="快速模式">Meta+O</span>
+        </div>
+        <div class="action-group">
+          <span class="action-btn" data-action="shift-tab" title="自动接受">Shift+Tab</span>
+          <span class="action-btn" data-action="newline" title="换行">\\⏎</span>
+        </div>
+        <div class="action-group">
+          <span class="action-btn" data-action="bash-mode" title="Bash模式">!</span>
+          <span class="action-btn" data-action="slash" title="命令">/</span>
+          <span class="action-btn" data-action="at" title="文件路径">@</span>
+          <span class="action-btn" data-action="ampersand" title="后台">&</span>
+        </div>
+        <div class="action-group numbers">
+          <span class="action-btn" data-action="num-5">5</span>
+          <span class="action-btn" data-action="num-6">6</span>
+          <span class="action-btn" data-action="num-7">7</span>
+          <span class="action-btn" data-action="num-8">8</span>
+          <span class="action-btn" data-action="num-9">9</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="settings-modal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>设置</h2>
+          <button id="close-settings" class="icon-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="server-url">服务器地址</label>
+            <input type="text" id="server-url" placeholder="ws://localhost:65436">
+          </div>
+          <div class="form-group">
+            <label for="auth-token">认证Token</label>
+            <input type="password" id="auth-token" placeholder="输入Token">
+          </div>
+          <div class="form-group">
+            <label for="work-dir">工作目录</label>
+            <div class="work-dir-container">
+              <input type="text" id="work-dir" placeholder="如: E:/MyCode/python/my-project">
+              <div id="work-dir-dropdown" class="work-dir-dropdown hidden">
+              </div>
+            </div>
+            <div id="work-dir-validation" class="work-dir-validation hidden">
+              <span class="validation-icon"></span>
+              <span class="validation-message"></span>
+            </div>
+            <small class="form-hint">AI Agent将在此目录下运行</small>
+          </div>
+          <div class="form-group inline-group">
+            <label for="ai-model">AI Agent</label>
+            <div class="custom-select">
+              <div class="custom-select-trigger" id="ai-model-trigger">
+                <span id="ai-model-value">-</span>
+                <span class="custom-select-arrow">▼</span>
+              </div>
+              <div class="custom-select-options hidden" id="ai-model-options">
+              </div>
+              <select id="ai-model" class="hidden">
+              </select>
+            </div>
+            <label class="checkbox-label">
+              <input type="checkbox" id="new-tab-checkbox" checked>
+              新建标签
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div class="modal-divider"></div>
+          <button id="connect-btn" class="primary-btn full-width">连接</button>
+          <button id="disconnect-btn" class="danger-btn full-width hidden">断开连接</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/xterm.min.js"></script>
+  <script src="/js/xterm-addon-fit.js"></script>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

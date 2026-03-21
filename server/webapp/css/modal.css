@@ -1,0 +1,270 @@
+/* ============================================
+   Modal & Forms - 模态框和表单
+   ============================================ */
+
+/* ====== 模态框 ====== */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-content {
+  background-color: var(--bg-secondary);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 400px;
+  max-height: 95vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.modal-header h2 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.modal-body {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-footer {
+  padding: 16px;
+  flex-shrink: 0;
+}
+
+/* ====== 表单 ====== */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.form-group input {
+  width: 100%;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+}
+
+.form-group input:focus {
+  border-color: var(--accent);
+}
+
+.form-group input::placeholder {
+  color: var(--text-secondary);
+}
+
+.form-group.inline-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.form-group.inline-group label:first-child {
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+.form-group.inline-group .custom-select {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.form-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* ====== 自定义下拉选择 ====== */
+.custom-select {
+  position: relative;
+}
+
+.custom-select select.hidden {
+  display: none;
+}
+
+.custom-select-trigger {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.custom-select-trigger:hover {
+  border-color: var(--accent);
+}
+
+.custom-select-trigger.active {
+  border-color: var(--accent);
+}
+
+#ai-model-value {
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.custom-select-arrow {
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin-left: 8px;
+}
+
+.custom-select-options {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.custom-select-option {
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.custom-select-option:hover {
+  background-color: var(--bg-primary);
+}
+
+.custom-select-option.selected {
+  background-color: var(--accent);
+  color: white;
+}
+
+/* ====== 复选框 ====== */
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* ====== 工作目录下拉 ====== */
+.work-dir-container {
+  position: relative;
+}
+
+.work-dir-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.work-dir-dropdown.hidden {
+  display: none;
+}
+
+.dropdown-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-primary);
+  transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+  background-color: var(--bg-primary);
+}
+
+/* ====== 工作目录验证 ====== */
+.work-dir-validation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.work-dir-validation.hidden {
+  display: none;
+}
+
+.work-dir-validation.validating {
+  background-color: rgba(220, 220, 170, 0.1);
+  color: var(--warning);
+}
+
+.work-dir-validation.valid {
+  background-color: rgba(78, 201, 176, 0.1);
+  color: var(--success);
+}
+
+.work-dir-validation.invalid {
+  background-color: rgba(244, 135, 113, 0.1);
+  color: var(--danger);
+}
+
+.validation-icon {
+  font-size: 14px;
+}
+
+.validation-message {
+  flex: 1;
+}
