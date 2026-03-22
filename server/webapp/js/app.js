@@ -37,7 +37,7 @@ class App {
     this.aiThinking = false;
     this.lastOutputTime = 0;
     this.aiCompleteTimer = null;
-    this.aiCompleteDelay = 2000; // 2秒无输出认为完成
+    this.aiCompleteDelay = 500; // 0.5秒无输出认为完成
 
     // 命令历史
     this.commandHistory = [];
