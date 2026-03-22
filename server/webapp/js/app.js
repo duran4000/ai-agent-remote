@@ -1318,6 +1318,11 @@ class App {
   updateLatencyDisplay(latency, quality) {
     if (!this.elements.latencyContainer) return;
 
+    if (latency === null) {
+      this.elements.latencyContainer.style.display = 'none';
+      return;
+    }
+
     this.elements.latencyContainer.style.display = 'flex';
     this.elements.latencyValue.textContent = `${latency}ms`;
 
@@ -1335,21 +1340,6 @@ class App {
 
   updateSessionInfo(aiAgent, workDir, deviceId = '', connected = false) {
     this.elements.currentWorkDir.textContent = workDir || '-';
-  }
-
-  updateLatencyDisplay(latency, quality) {
-    if (!this.elements.latencyContainer || !this.elements.latencyValue || !this.elements.latencyQuality) return;
-
-    if (latency === null) {
-      this.elements.latencyContainer.style.display = 'none';
-      return;
-    }
-
-    this.elements.latencyContainer.style.display = 'flex';
-    this.elements.latencyValue.textContent = `${latency}ms`;
-
-    // 更新质量指示器
-    this.elements.latencyQuality.className = 'latency-indicator ' + quality;
   }
 
   loadTabs() {
