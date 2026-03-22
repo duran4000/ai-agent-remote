@@ -163,13 +163,10 @@ export class WebSocketManager {
         this._latencyHistory.reduce((a, b) => a + b, 0) / this._latencyHistory.length
       );
 
-      const wasLatency = this.latency;
       this.latency = avgLatency;
 
-      // 延迟变化超过 50ms 时触发事件
-      if (wasLatency === null || Math.abs(wasLatency - avgLatency) > 50) {
-        this.emit('latency', { latency: avgLatency, history: [...this._latencyHistory] });
-      }
+      // 每次都触发延迟更新事件
+      this.emit('latency', { latency: avgLatency, history: [...this._latencyHistory] });
     }
   }
 
