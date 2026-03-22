@@ -1035,6 +1035,7 @@ class App {
 
     if (!this.aiThinking) {
       this.aiThinking = true;
+      console.log('[App] AI thinking started');
     }
 
     // 清除之前的定时器
@@ -1051,6 +1052,7 @@ class App {
   }
 
   onAIComplete() {
+    console.log('[App] AI thinking completed, sending notification');
     this.aiThinking = false;
 
     // 发送通知
@@ -1064,15 +1066,22 @@ class App {
       return;
     }
 
+    console.log('[App] Notification permission:', Notification.permission);
+
     // 检查权限
     if (Notification.permission === 'granted') {
-      new Notification(title, { body, icon: '/favicon.ico' });
+      console.log('[App] Showing notification:', title);
+      new Notification(title, { body });
     } else if (Notification.permission !== 'denied') {
+      console.log('[App] Requesting notification permission');
       Notification.requestPermission().then(permission => {
+        console.log('[App] Permission result:', permission);
         if (permission === 'granted') {
-          new Notification(title, { body, icon: '/favicon.ico' });
+          new Notification(title, { body });
         }
       });
+    } else {
+      console.log('[App] Notification permission denied');
     }
   }
 
