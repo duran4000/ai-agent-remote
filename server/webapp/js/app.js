@@ -33,6 +33,12 @@ class App {
     this.tabConnections = new Map();
     this.aiAgents = {};
 
+    // AI 完成通知相关
+    this.aiThinking = false;
+    this.lastOutputTime = 0;
+    this.aiCompleteTimer = null;
+    this.aiCompleteDelay = 2000; // 2秒无输出认为完成
+
     Object.defineProperty(this, 'wsManager', {
       get() {
         const connection = this.tabConnections.get(this.currentTabId);
@@ -664,6 +670,9 @@ class App {
         if (this.currentTabId === this.getCurrentTabIdForWs(wsManager)) {
           console.log('[App] Received output:', data?.content?.substring(0, 100));
           if (data.content) this.terminal.write(data.content);
+
+          // AI 完成检测
+          this.handleAIOutput();
         }
       });
 
@@ -966,6 +975,54 @@ class App {
           }
         }
       }
+    }
+  }
+
+  // AI 完成通知相关方法
+  handleAIOutput() {
+    // 记录最后输出时间，启动/重置完成检测定时器
+    this.lastOutputTime = Date.now();
+
+    if (!this.aiThinking) {
+      this.aiThinking = true;
+    }
+
+    // 清除之前的定时器
+    if (this.aiCompleteTimer) {
+      clearTimeout(this.aiCompleteTimer);
+    }
+
+    // 设置新的检测定时器
+    this.aiCompleteTimer = setTimeout(() => {
+      if (this.aiThinking && Date.now() - this.lastOutputTime >= this.aiCompleteDelay) {
+        this.onAIComplete();
+      }
+    }, this.aiCompleteDelay);
+  }
+
+  onAIComplete() {
+    this.aiThinking = false;
+
+    // 发送通知
+    this.sendNotification('AI 完成', 'AI 已完成思考，可以继续操作');
+  }
+
+  sendNotification(title, body) {
+    // 检查是否支持通知
+    if (!('Notification' in window)) {
+      console.log('[App] Browser does not support notifications');
+      return;
+    }
+
+    // 检查权限
+    if (Notification.permission === 'granted') {
+      new Notification(title, { body, icon: '/favicon.ico' });
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          new Notification(title, { body, icon: '/favicon.ico' });
+        }
+      });
     }
   }
 
