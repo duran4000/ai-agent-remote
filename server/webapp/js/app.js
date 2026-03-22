@@ -747,10 +747,13 @@ class App {
       this.updateConnectionUI(true);
       this.terminal.setConnected(true);
       this.elements.inputArea.classList.add('hidden-input');
-      
+
       this.saveWorkDirHistory(workDir);
-      
+
       this.updateSessionInfo(aiAgent, workDir, message.deviceId, true);
+
+      // 连接成功时请求通知权限
+      this.requestNotificationPermission();
       
       this.renderTabs();
 
@@ -1072,16 +1075,33 @@ class App {
     if (Notification.permission === 'granted') {
       console.log('[App] Showing notification:', title);
       new Notification(title, { body });
-    } else if (Notification.permission !== 'denied') {
-      console.log('[App] Requesting notification permission');
+    } else {
+      console.log('[App] Cannot show notification, permission not granted');
+    }
+  }
+
+  requestNotificationPermission() {
+    if (!('Notification' in window)) {
+      console.log('[App] Browser does not support notifications');
+      return;
+    }
+
+    if (Notification.permission === 'granted') {
+      console.log('[App] Notification permission already granted');
+      return;
+    }
+
+    if (Notification.permission !== 'denied') {
+      console.log('[App] Requesting notification permission on connect');
       Notification.requestPermission().then(permission => {
         console.log('[App] Permission result:', permission);
         if (permission === 'granted') {
-          new Notification(title, { body });
+          // 显示测试通知
+          new Notification('通知已启用', { body: 'AI 完成时会收到通知' });
         }
       });
     } else {
-      console.log('[App] Notification permission denied');
+      console.log('[App] Notification permission was denied before');
     }
   }
 
