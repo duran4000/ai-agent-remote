@@ -201,7 +201,7 @@
 }
 
 .info-item#latency-container {
-  gap: 0;
+  gap: 6px;
 }
 
 /* 延迟指示器 */
@@ -210,7 +210,6 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  margin-right: 2px;
 }
 
 .latency-indicator.excellent {
@@ -239,6 +238,7 @@
 #latency-value {
   min-width: auto;
   text-align: left;
+  font-style: italic;
 }
 
 #device-info {
