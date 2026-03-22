@@ -10,6 +10,13 @@ export class WebSocketManager {
     this.listeners = new Map();
     this.connectionMode = CONNECTION_MODES.RELAY;
     this.networkInfo = null;
+
+    // 延迟检测
+    this.latency = null;
+    this._pingTime = null;
+    this._heartbeatInterval = null;
+    this._latencyHistory = [];
+    this._maxLatencyHistory = 10;
   }
 
   async fetchNetworkInfo(serverUrl) {
@@ -82,9 +89,12 @@ export class WebSocketManager {
               this.sessionId = message.sessionId;
               this.deviceId = message.deviceId;
               this.isConnected = true;
-              
+
               localStorage.setItem('claude-remote-deviceId', message.deviceId);
-              
+
+              // 启动心跳检测
+              this._startHeartbeat();
+
               resolve(message);
             }
           } catch (error) {
@@ -110,6 +120,7 @@ export class WebSocketManager {
   }
 
   disconnect() {
+    this._stopHeartbeat();
     if (this.ws) {
       this.ws.close(1000, 'Client disconnect');
       this.ws = null;
@@ -117,9 +128,70 @@ export class WebSocketManager {
     }
   }
 
+  // 心跳检测
+  _startHeartbeat() {
+    this._stopHeartbeat();
+    this._heartbeatInterval = setInterval(() => {
+      if (this.ws && this.isConnected) {
+        this._pingTime = Date.now();
+        const message = createMessage(MSG_TYPES.CONTROL, { action: 'ping' }, this.sessionId, this.deviceId, this.deviceType);
+        this.ws.send(JSON.stringify(message));
+      }
+    }, 10000); // 每10秒发送一次 ping
+  }
+
+  _stopHeartbeat() {
+    if (this._heartbeatInterval) {
+      clearInterval(this._heartbeatInterval);
+      this._heartbeatInterval = null;
+    }
+  }
+
+  _handlePong() {
+    if (this._pingTime) {
+      const latency = Date.now() - this._pingTime;
+      this._pingTime = null;
+
+      // 记录延迟历史
+      this._latencyHistory.push(latency);
+      if (this._latencyHistory.length > this._maxLatencyHistory) {
+        this._latencyHistory.shift();
+      }
+
+      // 计算平均延迟
+      const avgLatency = Math.round(
+        this._latencyHistory.reduce((a, b) => a + b, 0) / this._latencyHistory.length
+      );
+
+      const wasLatency = this.latency;
+      this.latency = avgLatency;
+
+      // 延迟变化超过 50ms 时触发事件
+      if (wasLatency === null || Math.abs(wasLatency - avgLatency) > 50) {
+        this.emit('latency', { latency: avgLatency, history: [...this._latencyHistory] });
+      }
+    }
+  }
+
+  // 获取连接质量等级
+  getConnectionQuality() {
+    if (this.latency === null) return 'unknown';
+    if (this.latency < 100) return 'excellent';
+    if (this.latency < 200) return 'good';
+    if (this.latency < 500) return 'fair';
+    return 'poor';
+  }
+
   handleMessage(message) {
     const { type, data, sessionId } = message;
     console.log('[WS Client] handleMessage - type:', type, 'data:', data?.content?.substring?.(0, 50));
+
+    // 处理 pong 响应
+    if (type === MSG_TYPES.CONTROL && data?.action === 'pong') {
+      this._handlePong();
+      return;
+    }
+
     switch (type) {
       case MSG_TYPES.OUTPUT:
         console.log('[WS Client] Emitting output event');

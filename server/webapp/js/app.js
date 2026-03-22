@@ -64,6 +64,9 @@ class App {
       currentWorkDir: document.getElementById('current-work-dir'),
       sessionStatusDot: document.getElementById('session-status-dot'),
       sessionStatusText: document.getElementById('session-status-text'),
+      latencyContainer: document.getElementById('latency-container'),
+      latencyValue: document.getElementById('latency-value'),
+      latencyQuality: document.getElementById('latency-quality'),
       tabsList: document.getElementById('tabs-list'),
       addTabBtn: document.getElementById('add-tab-btn'),
       terminalOverlay: document.getElementById('terminal-overlay'),
@@ -684,10 +687,20 @@ class App {
             this.renderTabs();
           }
         }
-        
+
         if (this.currentTabId === tabId) {
           this.updateConnectionUI(false);
           this.desktopDisconnected = false;
+          // 隐藏延迟显示
+          if (this.elements.latencyContainer) {
+            this.elements.latencyContainer.style.display = 'none';
+          }
+        }
+      });
+
+      wsManager.on('latency', (data) => {
+        if (this.currentTabId === this.getCurrentTabIdForWs(wsManager)) {
+          this.updateLatencyDisplay(data.latency, wsManager.getConnectionQuality());
         }
       });
 
@@ -984,10 +997,20 @@ class App {
       this.elements.sessionStatusText.style.color = '#00ff00';
       this.elements.connectBtn.classList.add('hidden');
       this.elements.disconnectBtn.classList.remove('hidden');
+      // 显示延迟容器（初始值待更新）
+      if (this.elements.latencyContainer) {
+        this.elements.latencyContainer.style.display = 'flex';
+        this.elements.latencyValue.textContent = '-';
+        this.elements.latencyQuality.className = 'latency-indicator';
+      }
     } else if (connecting) {
       overlay.classList.remove('disconnected', 'unlocking');
       this.elements.sessionStatusDot.classList.add('connecting');
       this.elements.sessionStatusText.textContent = '连接中...';
+      // 隐藏延迟容器
+      if (this.elements.latencyContainer) {
+        this.elements.latencyContainer.style.display = 'none';
+      }
     } else {
       const unlockCircle = overlay.querySelector('.unlock-circle');
       if (unlockCircle) {
@@ -1006,7 +1029,29 @@ class App {
       this.elements.sessionStatusText.style.color = '#ff0000';
       this.elements.connectBtn.classList.remove('hidden');
       this.elements.disconnectBtn.classList.add('hidden');
+      // 隐藏延迟容器
+      if (this.elements.latencyContainer) {
+        this.elements.latencyContainer.style.display = 'none';
+      }
     }
+  }
+
+  updateLatencyDisplay(latency, quality) {
+    if (!this.elements.latencyContainer) return;
+
+    this.elements.latencyContainer.style.display = 'flex';
+    this.elements.latencyValue.textContent = `${latency}ms`;
+
+    // 更新质量指示器
+    const qualityNames = {
+      excellent: '极好',
+      good: '良好',
+      fair: '一般',
+      poor: '较差'
+    };
+
+    this.elements.latencyQuality.className = `latency-indicator ${quality}`;
+    this.elements.latencyQuality.title = qualityNames[quality] || '';
   }
 
   updateSessionInfo(aiAgent, workDir, deviceId = '', connected = false) {
