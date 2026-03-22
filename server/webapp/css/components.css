@@ -200,13 +200,17 @@
   justify-content: flex-start;
 }
 
+.info-item#latency-container {
+  gap: 0;
+}
+
 /* 延迟指示器 */
 .latency-indicator {
   display: inline-block;
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  margin-left: 4px;
+  margin-right: 2px;
 }
 
 .latency-indicator.excellent {
@@ -233,8 +237,8 @@
 }
 
 #latency-value {
-  min-width: 50px;
-  text-align: right;
+  min-width: auto;
+  text-align: left;
 }
 
 #device-info {
