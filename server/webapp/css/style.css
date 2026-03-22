@@ -438,7 +438,7 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  font-family: 'JetBrains Mono', 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Noto Sans Mono', 'Segoe UI Symbol', 'Apple Symbols', monospace;
   font-size: 14px;
   line-height: 1.5;
   color: var(--terminal-text);

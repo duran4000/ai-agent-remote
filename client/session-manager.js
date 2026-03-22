@@ -613,13 +613,13 @@ class SessionManager {
     const existingWrapper = this.checkExistingWrapper(normalizedSessionId, aiAgent);
     if (existingWrapper) {
       log(`[${sessionKey}] Found existing wrapper: PID=${existingWrapper.pid}, aiAgent=${existingWrapper.aiAgent || 'none'}`);
-      
-      // 检查aiAgent是否匹配
+
+      // 只检查aiAgent是否匹配，不比较command路径
+      // 这样当config.json中的command改变时不会重启已有的wrapper
       const aiAgentMismatch = existingWrapper.aiAgent && existingWrapper.aiAgent !== aiAgent;
-      const claudePathMismatch = existingWrapper.claudePath && existingWrapper.claudePath !== claudePath;
-      
-      if (aiAgentMismatch || claudePathMismatch) {
-        log(`[${sessionKey}] AI Agent or path mismatch: existing=${existingWrapper.aiAgent || 'none'}, new=${aiAgent}, existingPath=${existingWrapper.claudePath || 'none'}, newPath=${claudePath}, killing existing wrapper`);
+
+      if (aiAgentMismatch) {
+        log(`[${sessionKey}] AI Agent mismatch: existing=${existingWrapper.aiAgent || 'none'}, new=${aiAgent}, killing existing wrapper`);
         // 杀死现有的wrapper
         try {
           if (isWindows) {
@@ -634,7 +634,7 @@ class SessionManager {
         // 删除session
         this.sessions.delete(sessionKey);
       } else {
-        log(`[${sessionKey}] Wrapper already running with correct config: PID ${existingWrapper.pid}, reusing existing wrapper`);
+        log(`[${sessionKey}] Wrapper already running with correct aiAgent: PID ${existingWrapper.pid}, reusing existing wrapper`);
         const session = {
           wrapper: null,
           wrapperPid: existingWrapper.pid,
@@ -658,6 +658,9 @@ class SessionManager {
     if (isWindows) {
       // Windows: 使用start命令在新窗口中启动wrapper
       const windowTitle = `"${aiAgent.toUpperCase()}"`;
+      // 包含空格的参数需要用引号包裹
+      const quotedClaudePath = claudePath.includes(' ') ? `"${claudePath}"` : claudePath;
+
       spawnArgs = [
         'start',
         windowTitle,
@@ -668,12 +671,13 @@ class SessionManager {
         '--token', this.config.token,
         '--session', normalizedSessionId,
         '--device-id', `wrapper-${aiAgent}-${normalizedSessionId}`,
-        '--claude-path', claudePath,
+        '--claude-path', quotedClaudePath,
         '--ai-model', aiAgent
       ];
-      
+
       if (fallbackPath) {
-        spawnArgs.push('--fallback-path', fallbackPath);
+        const quotedFallbackPath = fallbackPath.includes(' ') ? `"${fallbackPath}"` : fallbackPath;
+        spawnArgs.push('--fallback-path', quotedFallbackPath);
       }
       
       log(`[${sessionKey}] CMD command: start ${windowTitle} /wait node ${wrapperPath} ...`);

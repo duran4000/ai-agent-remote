@@ -33,7 +33,7 @@ export class Terminal {
         cursorAccent: '#1a1a1a',
         selection: 'rgba(255, 255, 255, 0.3)'
       },
-      fontFamily: 'Consolas, Monaco, monospace',
+      fontFamily: '"JetBrains Mono", "Noto Sans Symbols 2", Consolas, Monaco, "Noto Sans Mono", monospace',
       fontSize: 14,
       lineHeight: 1.2,
       scrollback: 5000,
