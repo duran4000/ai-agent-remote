@@ -39,6 +39,11 @@ class App {
     this.aiCompleteTimer = null;
     this.aiCompleteDelay = 2000; // 2秒无输出认为完成
 
+    // 命令历史
+    this.commandHistory = [];
+    this.maxCommandHistory = 100;
+    this.historyIndex = -1;
+
     Object.defineProperty(this, 'wsManager', {
       get() {
         const connection = this.tabConnections.get(this.currentTabId);
@@ -396,6 +401,16 @@ class App {
 
     this.elements.commandInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') this.sendCommand();
+    });
+
+    this.elements.commandInput.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        this.navigateHistory('up');
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        this.navigateHistory('down');
+      }
     });
 
     this.elements.quickActions.addEventListener('pointerdown', (e) => {
@@ -816,11 +831,40 @@ class App {
     const input = this.elements.commandInput.value;
     if (!input) return;
 
+    // 添加到命令历史
+    if (input.trim() && (this.commandHistory.length === 0 || this.commandHistory[0] !== input)) {
+      this.commandHistory.unshift(input);
+      if (this.commandHistory.length > this.maxCommandHistory) {
+        this.commandHistory.pop();
+      }
+    }
+    this.historyIndex = -1;
+
     const size = this.terminal.getSize();
     if (this.wsManager && this.wsManager.sendCommand(input + '\n', size.cols, size.rows)) {
       this.elements.commandInput.value = '';
     } else {
       this.terminal.write('未连接到服务器', 'error');
+    }
+  }
+
+  // 浏览命令历史
+  navigateHistory(direction) {
+    if (this.commandHistory.length === 0) return;
+
+    if (direction === 'up') {
+      if (this.historyIndex < this.commandHistory.length - 1) {
+        this.historyIndex++;
+        this.elements.commandInput.value = this.commandHistory[this.historyIndex];
+      }
+    } else if (direction === 'down') {
+      if (this.historyIndex > 0) {
+        this.historyIndex--;
+        this.elements.commandInput.value = this.commandHistory[this.historyIndex];
+      } else if (this.historyIndex === 0) {
+        this.historyIndex = -1;
+        this.elements.commandInput.value = '';
+      }
     }
   }
 
