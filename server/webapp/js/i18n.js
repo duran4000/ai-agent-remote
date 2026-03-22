@@ -16,6 +16,7 @@ const i18n = {
 
     // 会话信息
     'session.workDir': '工作目录:',
+    'session.latency': '延迟:',
 
     // 终端
     'terminal.placeholder': '输入命令...',
@@ -128,6 +129,7 @@ const i18n = {
 
     // Session Info
     'session.workDir': 'Work Dir:',
+    'session.latency': 'Latency:',
 
     // Terminal
     'terminal.placeholder': 'Enter command...',
