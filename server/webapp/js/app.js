@@ -946,6 +946,9 @@ class App {
       case 'ctrl-g':
         this.wsManager.sendCommand('\x07', size.cols, size.rows);
         break;
+      case 'export-log':
+        this.exportTerminalLog();
+        break;
     }
     
     this.elements.quickActions.classList.remove('expanded');
@@ -1024,6 +1027,28 @@ class App {
         }
       });
     }
+  }
+
+  exportTerminalLog() {
+    const content = this.terminal.exportContent();
+    if (!content || content.trim().length === 0) {
+      alert('终端内容为空，无法导出');
+      return;
+    }
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const filename = `terminal-log-${timestamp}.txt`;
+
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   handleControl(data) {

@@ -500,6 +500,24 @@ export class Terminal {
     return this.history || [];
   }
 
+  // 导出终端内容为文本
+  exportContent() {
+    const buffer = this.term.buffer.active;
+    const lines = [];
+
+    for (let i = 0; i < buffer.length; i++) {
+      const line = buffer.getLine(i);
+      if (line) {
+        const lineText = line.translateToString(true);
+        if (lineText.trim().length > 0) {
+          lines.push(lineText);
+        }
+      }
+    }
+
+    return lines.join('\n');
+  }
+
   setFontSize(size) {
     this.term.options.fontSize = size;
     // 先隐藏最小尺寸警告，避免字体调整时闪烁
