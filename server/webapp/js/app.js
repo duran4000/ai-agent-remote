@@ -1355,16 +1355,18 @@ class App {
     this.elements.latencyContainer.style.display = 'flex';
     this.elements.latencyValue.textContent = `${latency}ms`;
 
-    // 更新质量指示器
-    const qualityNames = {
-      excellent: '极好',
-      good: '良好',
-      fair: '一般',
-      poor: '较差'
+    // 更新质量指示器和颜色
+    const qualityConfig = {
+      excellent: { name: '极好', color: '#4ade80' },
+      good: { name: '良好', color: '#a3e635' },
+      fair: { name: '一般', color: '#fbbf24' },
+      poor: { name: '较差', color: '#f87171' }
     };
 
+    const config = qualityConfig[quality] || qualityConfig.good;
     this.elements.latencyQuality.className = `latency-indicator ${quality}`;
-    this.elements.latencyQuality.title = qualityNames[quality] || '';
+    this.elements.latencyQuality.title = config.name;
+    this.elements.latencyValue.style.color = config.color;
   }
 
   updateSessionInfo(aiAgent, workDir, deviceId = '', connected = false) {
