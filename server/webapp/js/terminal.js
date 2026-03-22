@@ -518,6 +518,34 @@ export class Terminal {
     return lines.join('\n');
   }
 
+  // 搜索终端内容
+  search(keyword) {
+    const buffer = this.term.buffer.active;
+    const results = [];
+    const lowerKeyword = keyword.toLowerCase();
+
+    for (let i = 0; i < buffer.length; i++) {
+      const line = buffer.getLine(i);
+      if (line) {
+        const lineText = line.translateToString(true);
+        if (lineText.toLowerCase().includes(lowerKeyword)) {
+          results.push({
+            line: i,
+            text: lineText,
+            ydisp: this.term._core?.buffer?.ydisp || 0
+          });
+        }
+      }
+    }
+
+    return results;
+  }
+
+  // 跳转到指定行
+  scrollToLine(lineNumber) {
+    this.term.scrollToLine(lineNumber);
+  }
+
   setFontSize(size) {
     this.term.options.fontSize = size;
     // 先隐藏最小尺寸警告，避免字体调整时闪烁

@@ -993,6 +993,9 @@ class App {
       case 'export-log':
         this.exportTerminalLog();
         break;
+      case 'search-terminal':
+        this.toggleTerminalSearch();
+        break;
     }
     
     this.elements.quickActions.classList.remove('expanded');
@@ -1093,6 +1096,156 @@ class App {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
+
+  // 终端搜索功能
+  toggleTerminalSearch() {
+    let searchBox = document.getElementById('terminal-search-box');
+
+    if (!searchBox) {
+      // 创建搜索框
+      searchBox = document.createElement('div');
+      searchBox.id = 'terminal-search-box';
+      searchBox.style.cssText = `
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 8px;
+        z-index: 100;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      `;
+
+      searchBox.innerHTML = `
+        <input type="text" id="terminal-search-input" placeholder="搜索..." style="
+          background: var(--bg-tertiary);
+          border: 1px solid var(--border);
+          border-radius: 4px;
+          padding: 4px 8px;
+          color: var(--text-primary);
+          width: 200px;
+        ">
+        <button id="terminal-search-prev" style="
+          background: var(--bg-tertiary);
+          border: 1px solid var(--border);
+          border-radius: 4px;
+          padding: 4px 8px;
+          color: var(--text-primary);
+          cursor: pointer;
+        ">↑</button>
+        <button id="terminal-search-next" style="
+          background: var(--bg-tertiary);
+          border: 1px solid var(--border);
+          border-radius: 4px;
+          padding: 4px 8px;
+          color: var(--text-primary);
+          cursor: pointer;
+        ">↓</button>
+        <span id="terminal-search-count" style="
+          color: var(--text-secondary);
+          font-size: 12px;
+          min-width: 50px;
+        "></span>
+        <button id="terminal-search-close" style="
+          background: transparent;
+          border: none;
+          color: var(--text-secondary);
+          cursor: pointer;
+          font-size: 16px;
+        ">×</button>
+      `;
+
+      const terminalContainer = document.getElementById('terminal-container');
+      terminalContainer.style.position = 'relative';
+      terminalContainer.appendChild(searchBox);
+
+      // 绑定事件
+      const searchInput = document.getElementById('terminal-search-input');
+      const prevBtn = document.getElementById('terminal-search-prev');
+      const nextBtn = document.getElementById('terminal-search-next');
+      const closeBtn = document.getElementById('terminal-search-close');
+
+      searchInput.addEventListener('input', () => this.performSearch());
+      searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          this.performSearch();
+        }
+      });
+
+      prevBtn.addEventListener('click', () => this.navigateSearch(-1));
+      nextBtn.addEventListener('click', () => this.navigateSearch(1));
+      closeBtn.addEventListener('click', () => this.closeTerminalSearch());
+
+      this.searchResults = [];
+      this.searchIndex = -1;
+    } else {
+      searchBox.style.display = searchBox.style.display === 'none' ? 'flex' : 'none';
+    }
+
+    // 聚焦输入框
+    const input = document.getElementById('terminal-search-input');
+    if (input && searchBox.style.display !== 'none') {
+      input.focus();
+    }
+  }
+
+  performSearch() {
+    const input = document.getElementById('terminal-search-input');
+    const keyword = input?.value?.trim();
+
+    if (!keyword) {
+      this.searchResults = [];
+      this.searchIndex = -1;
+      this.updateSearchCount();
+      return;
+    }
+
+    this.searchResults = this.terminal.search(keyword);
+    this.searchIndex = this.searchResults.length > 0 ? 0 : -1;
+    this.updateSearchCount();
+
+    if (this.searchResults.length > 0) {
+      this.terminal.scrollToLine(this.searchResults[0].line);
+    }
+  }
+
+  navigateSearch(direction) {
+    if (this.searchResults.length === 0) return;
+
+    this.searchIndex += direction;
+
+    if (this.searchIndex < 0) {
+      this.searchIndex = this.searchResults.length - 1;
+    } else if (this.searchIndex >= this.searchResults.length) {
+      this.searchIndex = 0;
+    }
+
+    this.terminal.scrollToLine(this.searchResults[this.searchIndex].line);
+    this.updateSearchCount();
+  }
+
+  updateSearchCount() {
+    const countEl = document.getElementById('terminal-search-count');
+    if (countEl) {
+      if (this.searchResults.length === 0) {
+        countEl.textContent = '无结果';
+      } else {
+        countEl.textContent = `${this.searchIndex + 1}/${this.searchResults.length}`;
+      }
+    }
+  }
+
+  closeTerminalSearch() {
+    const searchBox = document.getElementById('terminal-search-box');
+    if (searchBox) {
+      searchBox.style.display = 'none';
+    }
+    this.searchResults = [];
+    this.searchIndex = -1;
   }
 
   handleControl(data) {
