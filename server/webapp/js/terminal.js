@@ -24,7 +24,8 @@ export class Terminal {
     this.escSequenceBuffer = '';
     this.escSequenceTimer = null;
     this.aiAgent = null;
-    
+    this._userYdisp = null; // 用户想查看的位置（null 表示在底部）
+
     this.term = new window.Terminal({
       theme: {
         background: '#1a1a1a',
@@ -59,8 +60,26 @@ export class Terminal {
     
     this.term.open(container);
 
+    // 使用 xterm 的 onScroll API 监听滚动
+    this.term.onScroll(() => {
+      const buffer = this.term._core?.buffer;
+      if (buffer) {
+        const isAtBottom = buffer.ydisp === buffer.ybase;
+        this.autoScroll = isAtBottom;
+
+        if (isAtBottom) {
+          // 用户滚动回底部，清除记录的位置
+          this._userYdisp = null;
+        } else {
+          // 用户滚动离开底部，记录想查看的位置
+          this._userYdisp = buffer.ydisp;
+        }
+      }
+    });
+    console.log('[Terminal] onScroll listener attached');
+
     // 修复 xterm.js 辅助 textarea 的位置问题
-    this.fixHelperTextareaPosition(container);
+    this.fixHelperTextareaPosition(this.container);
 
     // 持续监控并修复
     this._fixInterval = setInterval(() => {
@@ -438,8 +457,24 @@ export class Terminal {
       coloredContent = `\x1b[33m${processedContent}\x1b[0m`;
     }
 
+    // 每次写入前检查当前位置
+    const buffer = this.term._core?.buffer;
+    if (buffer) {
+      const isAtBottom = buffer.ydisp === buffer.ybase;
+      if (!isAtBottom) {
+        // 用户不在底部，记录当前位置
+        this._userYdisp = buffer.ydisp;
+      }
+    }
+
+    // 保存要恢复的位置
+    const restoreYdisp = this._userYdisp;
+
     this.term.write(coloredContent, () => {
-      // 写入完成后移除错误位置的光标轮廓
+      // 如果用户之前不在底部，恢复滚动位置
+      if (restoreYdisp !== null) {
+        this.term.scrollToLine(restoreYdisp);
+      }
       this.fixHelperTextareaPosition(this.container);
     });
 
@@ -448,7 +483,8 @@ export class Terminal {
       this.history = this.history.slice(-this.maxHistory);
     }
 
-    if (this.autoScroll) this.scrollToBottom();
+    // 只有在底部时才自动滚动
+    if (restoreYdisp === null) this.scrollToBottom();
   }
 
   clear() {
@@ -483,6 +519,9 @@ export class Terminal {
     this.resizeObserver.disconnect();
     if (this.zoomCheckInterval) {
       clearInterval(this.zoomCheckInterval);
+    }
+    if (this._fixInterval) {
+      clearInterval(this._fixInterval);
     }
     this.term.dispose();
   }
