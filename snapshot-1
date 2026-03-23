@@ -1,0 +1,35 @@
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - button "EN" [ref=e5] [cursor=pointer]
+    - button "+" [ref=e6] [cursor=pointer]
+    - link "⚙" [ref=e7] [cursor=pointer]:
+      - /url: /admin
+  - generic [ref=e8]:
+    - generic [ref=e11]: 已断开
+    - generic [ref=e12]:
+      - generic [ref=e13]: "工作目录:"
+      - generic [ref=e14]: "-"
+  - generic [ref=e15]:
+    - generic [ref=e19]:
+      - generic:
+        - textbox "Terminal input"
+    - generic [ref=e53] [cursor=pointer]:
+      - img [ref=e54]
+      - generic [ref=e56]: 已断开
+  - generic [ref=e58]:
+    - generic [ref=e59]:
+      - generic "退出/取消" [ref=e60] [cursor=pointer]: ESC
+      - generic "展开更多" [ref=e61] [cursor=pointer]: ⌨️
+    - generic [ref=e62]:
+      - generic [ref=e63] [cursor=pointer]: "1"
+      - generic [ref=e64] [cursor=pointer]: "2"
+    - generic [ref=e65]:
+      - generic [ref=e66] [cursor=pointer]: "3"
+      - generic [ref=e67] [cursor=pointer]: "4"
+      - generic "上一条命令" [ref=e68] [cursor=pointer]: ↑
+      - generic "下一条命令" [ref=e69] [cursor=pointer]: ↓
+      - generic "左移" [ref=e70] [cursor=pointer]: ←
+      - generic "右移" [ref=e71] [cursor=pointer]: →
+    - generic [ref=e72]:
+      - generic "退格" [ref=e73] [cursor=pointer]: ⌫
+      - generic "回车" [ref=e74] [cursor=pointer]: Enter

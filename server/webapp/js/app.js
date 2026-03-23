@@ -77,7 +77,7 @@ class App {
       sessionStatusText: document.getElementById('session-status-text'),
       latencyContainer: document.getElementById('latency-container'),
       latencyValue: document.getElementById('latency-value'),
-      latencyQuality: document.getElementById('latency-quality'),
+      latencyIcon: document.getElementById('latency-icon'),
       tabsList: document.getElementById('tabs-list'),
       addTabBtn: document.getElementById('add-tab-btn'),
       terminalOverlay: document.getElementById('terminal-overlay'),
@@ -1402,7 +1402,9 @@ class App {
       if (this.elements.latencyContainer) {
         this.elements.latencyContainer.style.display = 'flex';
         this.elements.latencyValue.textContent = '-';
-        this.elements.latencyQuality.className = 'latency-indicator';
+        if (this.elements.latencyIcon) {
+          this.elements.latencyIcon.className = 'info-icon';
+        }
       }
     } else if (connecting) {
       overlay.classList.remove('disconnected', 'unlocking');
@@ -1448,7 +1450,7 @@ class App {
     this.elements.latencyContainer.style.display = 'flex';
     this.elements.latencyValue.textContent = `${latency}ms`;
 
-    // 更新质量指示器和颜色
+    // 更新图标颜色
     const qualityConfig = {
       excellent: { name: '极好', color: '#4ade80' },
       good: { name: '良好', color: '#a3e635' },
@@ -1457,8 +1459,10 @@ class App {
     };
 
     const config = qualityConfig[quality] || qualityConfig.good;
-    this.elements.latencyQuality.className = `latency-indicator ${quality}`;
-    this.elements.latencyQuality.title = config.name;
+    if (this.elements.latencyIcon) {
+      this.elements.latencyIcon.className = `info-icon ${quality}`;
+      this.elements.latencyIcon.title = config.name;
+    }
     this.elements.latencyValue.style.color = config.color;
   }
 
