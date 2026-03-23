@@ -57,6 +57,9 @@
   gap: 4px;
   max-width: 180px;
   position: relative;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .tab-btn:hover {
@@ -73,7 +76,6 @@
 .tab-btn.active.connected {
   background-color: #15803d;
   border-color: #15803d;
-}
 }
 
 .tab-btn .tab-close {
@@ -563,4 +565,27 @@
 .font-size-option.active {
   background-color: var(--accent);
   color: white;
+}
+
+/* ====== 标签拖拽排序 ====== */
+.tab-btn.long-press-ready {
+  background-color: var(--bg-primary);
+  transform: scale(0.95);
+  transition: transform 0.1s ease;
+}
+
+.tab-btn.dragging {
+  opacity: 0.5;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  transition: none;
+}
+
+.tab-placeholder {
+  background-color: var(--accent);
+  opacity: 0.3;
+  border: 2px dashed var(--accent);
+  border-radius: 6px;
+  flex-shrink: 0;
 }

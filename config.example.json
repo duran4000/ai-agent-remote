@@ -3,13 +3,43 @@
     "claude": {
       "name": "Claude",
       "command": "claude --dangerously-skip-permissions",
+      "fallbackPath": "C:\\Users\\duran\\.local\\bin\\claude.exe"
+    },
+    "qwen": {
+      "name": "Qwen",
+      "command": "qwen",
+      "fallbackPath": "C:\\Users\\duran\\AppData\\Roaming\\npm\\qwen.ps1"
+    },
+    "opencode": {
+      "name": "opencode",
+      "command": "opencode",
+      "fallbackPath": "C:\\Users\\duran\\AppData\\Roaming\\npm\\opencode.cmd"
+    },
+    "iflow": {
+      "name": "iFlow",
+      "command": "iflow",
+      "fallbackPath": "C:\\Users\\duran\\AppData\\Roaming\\npm\\iflow.cmd"
+    },
+    "gemini": {
+      "name": "Gemini",
+      "command": "gemini",
+      "fallbackPath": "C:\\Users\\duran\\AppData\\Roaming\\npm\\gemini.cmd"
+    },
+    "openclaw": {
+      "name": "OpenClaw",
+      "command": "openclaw tui",
+      "fallbackPath": ""
+    },
+    "custom_1773641344030": {
+      "name": "cmd",
+      "command": "cmd",
       "fallbackPath": ""
     }
   },
   "server": {
     "host": "0.0.0.0",
     "port": 41491,
-    "httpsPort": 65437,
+    "httpsPort": 41492,
     "url": "ws://localhost:41491",
     "token": "YOUR_TOKEN_HERE",
     "authPassword": "YOUR_PASSWORD_HERE"

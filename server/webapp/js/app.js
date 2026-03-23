@@ -116,6 +116,7 @@ class App {
     this.setupEventListeners();
     this.setupVirtualKeyboardHandler();
     this.setupFontSizeHandler();
+    this.setupSwipeGesture();
     this.updateConnectionUI(false);
     this.renderTabs();
     this.loadCurrentTabSettings();
@@ -201,6 +202,98 @@ class App {
         return;
       }
     }, { passive: false });
+  }
+
+  setupSwipeGesture() {
+    const container = document.getElementById('terminal-container');
+    if (!container) return;
+
+    let startX = 0;
+    let startY = 0;
+    let startTime = 0;
+    const swipeThreshold = 80; // 滑动距离阈值
+    const maxVerticalDistance = 100; // 最大垂直距离（防止上下滚动时触发）
+    const maxSwipeTime = 300; // 最大滑动时间（毫秒）
+
+    // 使用 capture 阶段监听，确保在 xterm.js 之前捕获
+    container.addEventListener('touchstart', (e) => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      startTime = Date.now();
+    }, { passive: true, capture: true });
+
+    container.addEventListener('touchend', (e) => {
+      if (this.tabs.length <= 1) return; // 只有一个标签时不切换
+
+      const endX = e.changedTouches[0].clientX;
+      const endY = e.changedTouches[0].clientY;
+      const endTime = Date.now();
+
+      const deltaX = endX - startX;
+      const deltaY = Math.abs(endY - startY);
+      const deltaTime = endTime - startTime;
+
+      // 检查是否是有效的水平滑动手势
+      if (
+        deltaTime < maxSwipeTime &&
+        deltaY < maxVerticalDistance &&
+        Math.abs(deltaX) > swipeThreshold
+      ) {
+        // 查找当前标签的索引
+        const currentIndex = this.tabs.findIndex(t => t.id === this.currentTabId);
+        if (currentIndex === -1) return;
+
+        let newIndex;
+        if (deltaX > 0) {
+          // 右滑 - 切换到下一个标签
+          newIndex = currentIndex < this.tabs.length - 1 ? currentIndex + 1 : 0;
+        } else {
+          // 左滑 - 切换到上一个标签
+          newIndex = currentIndex > 0 ? currentIndex - 1 : this.tabs.length - 1;
+        }
+
+        const newTab = this.tabs[newIndex];
+        if (newTab && newTab.id !== this.currentTabId) {
+          this.switchTab(newTab.id);
+          this.showTabSwitchIndicator(deltaX > 0 ? 'next' : 'prev', newIndex);
+        }
+      }
+    }, { passive: true, capture: true });
+  }
+
+  showTabSwitchIndicator(direction, newIndex) {
+    // 创建切换指示器
+    let indicator = document.getElementById('tab-switch-indicator');
+    if (!indicator) {
+      indicator = document.createElement('div');
+      indicator.id = 'tab-switch-indicator';
+      indicator.style.cssText = `
+        position: fixed;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-size: 16px;
+        pointer-events: none;
+        z-index: 1000;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+      `;
+      document.body.appendChild(indicator);
+    }
+
+    // 设置箭头方向
+    indicator.textContent = direction === 'prev' ? '◀' : '▶';
+    indicator.style.left = direction === 'prev' ? '20px' : 'auto';
+    indicator.style.right = direction === 'next' ? '20px' : 'auto';
+
+    // 显示并淡出
+    indicator.style.opacity = '1';
+    setTimeout(() => {
+      indicator.style.opacity = '0';
+    }, 500);
   }
 
   loadFontSize() {
@@ -1426,7 +1519,216 @@ class App {
       tabBtn.appendChild(closeBtn);
       tabBtn.onclick = () => this.switchTab(tab.id);
 
+      // 添加拖拽排序事件
+      this.setupTabDrag(tabBtn, tab.id);
+
       this.elements.tabsList.appendChild(tabBtn);
+    });
+  }
+
+  setupTabDrag(tabBtn, tabId) {
+    let longPressTimer = null;
+    let isDragging = false;
+    let isLongPress = false;
+    let draggedElement = null;
+    let placeholder = null;
+    let startX = 0;
+    let startY = 0;
+    const longPressDelay = 400; // 长按触发时间
+    const moveThreshold = 10; // 移动阈值，超过此距离才取消长按
+
+    const clearDragState = () => {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+      tabBtn.classList.remove('long-press-ready');
+      if (isDragging) {
+        isDragging = false;
+        if (draggedElement) {
+          draggedElement.classList.remove('dragging');
+          draggedElement.style.transform = '';
+          draggedElement.style.opacity = '';
+        }
+        if (placeholder && placeholder.parentNode) {
+          placeholder.parentNode.removeChild(placeholder);
+        }
+        draggedElement = null;
+        placeholder = null;
+      }
+      isLongPress = false;
+      document.body.style.userSelect = '';
+      document.body.style.webkitUserSelect = '';
+    };
+
+    const startDrag = (clientX, clientY) => {
+      isDragging = true;
+      isLongPress = true;
+      draggedElement = tabBtn;
+      draggedElement.classList.remove('long-press-ready');
+      draggedElement.classList.add('dragging');
+      document.body.style.userSelect = 'none';
+      document.body.style.webkitUserSelect = 'none';
+
+      // 触觉反馈
+      if (navigator.vibrate) {
+        navigator.vibrate(30);
+      }
+
+      // 创建占位符
+      placeholder = document.createElement('div');
+      placeholder.className = 'tab-placeholder';
+      placeholder.style.width = `${tabBtn.offsetWidth}px`;
+      placeholder.style.height = `${tabBtn.offsetHeight}px`;
+      tabBtn.parentNode.insertBefore(placeholder, tabBtn);
+    };
+
+    const handleMove = (clientX) => {
+      if (!isDragging || !draggedElement) return;
+
+      const tabsList = this.elements.tabsList;
+      const children = Array.from(tabsList.children);
+
+      // 遍历所有子元素（包括占位符和其他标签）
+      for (let i = 0; i < children.length; i++) {
+        const child = children[i];
+        if (child === placeholder) continue;
+        if (!child.classList.contains('tab-btn')) continue;
+
+        const rect = child.getBoundingClientRect();
+        const midX = rect.left + rect.width / 2;
+        const placeholderIdx = children.indexOf(placeholder);
+        const childIdx = i;
+
+        if (clientX < midX && placeholderIdx > childIdx) {
+          // 移动到左边，且占位符在右边
+          tabsList.insertBefore(placeholder, child);
+          break;
+        } else if (clientX > midX && placeholderIdx < childIdx) {
+          // 移动到右边，且占位符在左边
+          tabsList.insertBefore(placeholder, child.nextSibling);
+          break;
+        }
+      }
+    };
+
+    const handleEnd = () => {
+      if (!isDragging) {
+        clearDragState();
+        return;
+      }
+
+      // 计算新顺序
+      const tabsList = this.elements.tabsList;
+      const newOrder = [];
+      tabsList.querySelectorAll('.tab-btn, .tab-placeholder').forEach(el => {
+        if (el.classList.contains('tab-placeholder')) {
+          newOrder.push(tabId);
+        } else if (el.dataset.tabId) {
+          newOrder.push(el.dataset.tabId);
+        }
+      });
+
+      // 重新排序 tabs 数组
+      this.tabs.sort((a, b) => newOrder.indexOf(a.id) - newOrder.indexOf(b.id));
+      this.saveTabs();
+
+      clearDragState();
+      this.renderTabs();
+    };
+
+    // 阻止右键菜单
+    tabBtn.addEventListener('contextmenu', (e) => {
+      if (isLongPress) {
+        e.preventDefault();
+      }
+    });
+
+    // 触摸事件
+    tabBtn.addEventListener('touchstart', (e) => {
+      if (e.target.closest('.tab-lock') || e.target.closest('.tab-close')) return;
+
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+
+      // 立即禁止选择
+      document.body.style.userSelect = 'none';
+      document.body.style.webkitUserSelect = 'none';
+
+      // 添加预备状态样式
+      tabBtn.classList.add('long-press-ready');
+
+      longPressTimer = setTimeout(() => {
+        startDrag(e.touches[0].clientX, e.touches[0].clientY);
+      }, longPressDelay);
+    }, { passive: true });
+
+    tabBtn.addEventListener('touchmove', (e) => {
+      const currentX = e.touches[0].clientX;
+      const currentY = e.touches[0].clientY;
+      const moveDistance = Math.sqrt(Math.pow(currentX - startX, 2) + Math.pow(currentY - startY, 2));
+
+      // 只有移动距离超过阈值才取消长按
+      if (longPressTimer && moveDistance > moveThreshold) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+        tabBtn.classList.remove('long-press-ready');
+        document.body.style.userSelect = '';
+        document.body.style.webkitUserSelect = '';
+      }
+
+      if (isDragging) {
+        e.preventDefault();
+        handleMove(currentX);
+      }
+    }, { passive: false });
+
+    tabBtn.addEventListener('touchend', (e) => {
+      if (isDragging) {
+        e.preventDefault();
+      }
+      handleEnd();
+    });
+    tabBtn.addEventListener('touchcancel', clearDragState);
+
+    // 鼠标事件（桌面端）
+    tabBtn.addEventListener('mousedown', (e) => {
+      if (e.target.closest('.tab-lock') || e.target.closest('.tab-close')) return;
+      if (e.button !== 0) return; // 只响应左键
+
+      startX = e.clientX;
+      startY = e.clientY;
+
+      tabBtn.classList.add('long-press-ready');
+      document.body.style.userSelect = 'none';
+
+      longPressTimer = setTimeout(() => {
+        startDrag(e.clientX, e.clientY);
+      }, longPressDelay);
+    });
+
+    tabBtn.addEventListener('mousemove', (e) => {
+      const moveDistance = Math.sqrt(Math.pow(e.clientX - startX, 2) + Math.pow(e.clientY - startY, 2));
+
+      if (longPressTimer && moveDistance > moveThreshold) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+        tabBtn.classList.remove('long-press-ready');
+      }
+      if (isDragging) {
+        e.preventDefault();
+        handleMove(e.clientX);
+      }
+    });
+
+    tabBtn.addEventListener('mouseup', handleEnd);
+    tabBtn.addEventListener('mouseleave', () => {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+        tabBtn.classList.remove('long-press-ready');
+        document.body.style.userSelect = '';
+      }
     });
   }
 

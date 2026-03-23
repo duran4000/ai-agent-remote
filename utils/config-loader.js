@@ -126,7 +126,7 @@ export function getAIModelPath(aiModel, sessionId, forceReload = false) {
 }
 
 export function getAIAgents() {
-  const config = loadConfig();
+  const config = loadConfig(true); // 强制重新加载，确保获取最新配置
   return config.aiAgents || {};
 }
 

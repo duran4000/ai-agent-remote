@@ -51,14 +51,16 @@ function Ensure-LogsDir {
 function Stop-AllServices {
     Write-Log "Stopping all services..." "Yellow"
 
-    # 停止 Server
-    $netstatOutput = netstat -ano 2>$null | Select-String ":$PORT"
-    if ($netstatOutput) {
-        $processId = ($netstatOutput -split '\s+') | Select-Object -Last 1
+    # 停止 Server - 通过命令行匹配更可靠
+    $servers = Get-WmiObject Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*claude-remote-server.js*" }
+    foreach ($proc in $servers) {
         try {
-            Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
-            Write-Log "Server stopped (PID: $processId)" "Green"
+            Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue
+            Write-Log "Server stopped (PID: $($proc.ProcessId))" "Green"
         } catch {}
+    }
+    if (-not $servers) {
+        Write-Log "No server process found" "Gray"
     }
 
     # 停止 Session Manager
@@ -68,6 +70,9 @@ function Stop-AllServices {
             Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue
             Write-Log "Session Manager stopped (PID: $($proc.ProcessId))" "Green"
         } catch {}
+    }
+    if (-not $managers) {
+        Write-Log "No session manager process found" "Gray"
     }
 
     # 清理锁文件
