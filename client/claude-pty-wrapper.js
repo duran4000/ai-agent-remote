@@ -5,6 +5,7 @@ import { WebSocket } from 'ws';
 import os from 'os';
 import path from 'path';
 import fs from 'fs';
+import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { getServerUrl, getServerToken, getWrapperDefaults, getAIModelPath, loadConfig } from '../utils/config-loader.js';
 
@@ -48,6 +49,7 @@ class ClaudePtyWrapper {
   constructor() {
     this.ws = null;
     this.pty = null;
+    this.ptyPid = null; // 记录 PTY 子进程的 PID
     this.sessionId = null;
     this.deviceId = null;
     this.assignedDeviceId = null;
@@ -63,7 +65,8 @@ class ClaudePtyWrapper {
     this.resizeSource = null;
     this.activeClient = null;
     this.activeClientTimer = null;
-    
+    this.isStopping = false; // 防止重复停止
+
     log('Starting Claude PTY Wrapper...');
     log('Raw process.argv:', JSON.stringify(process.argv));
     log('Config:', JSON.stringify(this.config));
@@ -364,7 +367,8 @@ class ClaudePtyWrapper {
           echo: false,
           ...(isWindows && { useConpty: true })
         });
-        log('PTY spawn successful');
+        this.ptyPid = this.pty.pid; // 记录 PTY 进程的 PID
+        log(`PTY spawn successful, PID: ${this.ptyPid}`);
         return true;
       } catch (error) {
         log(`Failed to spawn with command '${cmd}':`, error.message);
@@ -634,12 +638,19 @@ class ClaudePtyWrapper {
   }
 
   stop() {
+    // 防止重复停止
+    if (this.isStopping) {
+      log('Already stopping, skipping...');
+      return;
+    }
+    this.isStopping = true;
+
     this.stopHeartbeat();
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
-    
+
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       try {
         this.ws.send(JSON.stringify({
@@ -657,14 +668,55 @@ class ClaudePtyWrapper {
         log('Error sending disconnected status:', err.message);
       }
     }
-    
+
     if (this.ws) {
       this.ws.close();
     }
+
+    // 强制杀死 PTY 进程树
+    if (this.ptyPid) {
+      this.killPtyProcessTree(this.ptyPid);
+    }
+
     if (this.pty) {
-      this.pty.kill();
+      try {
+        this.pty.kill();
+      } catch (e) {
+        log('Error killing PTY:', e.message);
+      }
     }
     this.shouldReconnect = false;
+  }
+
+  // 杀死 PTY 进程及其所有子进程
+  killPtyProcessTree(pid) {
+    const isWindows = process.platform === 'win32';
+
+    try {
+      if (isWindows) {
+        // Windows: 使用 taskkill /F /T 杀死进程树
+        // /T 参数会杀死指定进程及其所有子进程
+        execSync(`taskkill /F /T /PID ${pid}`, { encoding: 'utf8', timeout: 5000 });
+        log(`Killed PTY process tree: PID ${pid}`);
+      } else {
+        // Linux/Mac: 使用 kill -TERM 杀死进程组
+        process.kill(-pid, 'SIGTERM');
+        log(`Killed PTY process group: -${pid}`);
+      }
+    } catch (error) {
+      log(`Failed to kill PTY process tree: ${error.message}`);
+      // 如果进程树杀死失败，尝试只杀死进程本身
+      try {
+        if (isWindows) {
+          execSync(`taskkill /F /PID ${pid}`, { encoding: 'utf8', timeout: 5000 });
+        } else {
+          process.kill(pid, 'SIGKILL');
+        }
+        log(`Killed PTY process: PID ${pid}`);
+      } catch (e) {
+        log(`Failed to kill PTY process: ${e.message}`);
+      }
+    }
   }
 }
 

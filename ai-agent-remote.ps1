@@ -48,31 +48,64 @@ function Ensure-LogsDir {
     }
 }
 
+function Save-Pids {
+    param([int]$ServerPid, [int]$ManagerPid)
+    Ensure-LogsDir  # .pids 放在 logs/ 目录
+    $pidFilePath = Join-Path $LOGS_DIR "service.pids"
+    "${ServerPid},${ManagerPid}" | Out-File -FilePath $pidFilePath -Encoding utf8 -NoNewline
+}
+
+function Read-Pids {
+    $pidFilePath = Join-Path $LOGS_DIR "service.pids"
+    if (-not (Test-Path $pidFilePath)) { return $null }
+    $content = Get-Content $pidFilePath -Raw -ErrorAction SilentlyContinue
+    if (-not $content) { return $null }
+    $parts = $content.Trim() -split ","
+    return @{ Server = [int]$parts[0]; Manager = [int]$parts[1] }
+}
+
+function Stop-ProcessIfExists {
+    param([int]$ProcessId, [string]$Label)
+    if ($ProcessId -le 0) { return }
+    try {
+        $proc = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue
+        if ($proc) {
+            Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
+            Write-Log "$Label stopped (PID: $ProcessId)" "Green"
+        }
+    } catch {}
+}
+
 function Stop-AllServices {
     Write-Log "Stopping all services..." "Yellow"
 
-    # 停止 Server - 通过命令行匹配更可靠
-    $servers = Get-WmiObject Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*claude-remote-server.js*" }
-    foreach ($proc in $servers) {
-        try {
-            Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue
-            Write-Log "Server stopped (PID: $($proc.ProcessId))" "Green"
-        } catch {}
-    }
-    if (-not $servers) {
-        Write-Log "No server process found" "Gray"
+    # 1. 优先通过 PID 文件停止
+    $pids = Read-Pids
+    if ($pids) {
+        Stop-ProcessIfExists -ProcessId $pids.Manager -Label "Session Manager"
+        Stop-ProcessIfExists -ProcessId $pids.Server -Label "Server"
+        # 清理 PID 文件
+        $pidFilePath = Join-Path $LOGS_DIR "service.pids"
+        if (Test-Path $pidFilePath) { Remove-Item $pidFilePath -Force -ErrorAction SilentlyContinue }
+        Start-Sleep -Milliseconds 500
     }
 
-    # 停止 Session Manager
-    $managers = Get-WmiObject Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*session-manager.js*" }
-    foreach ($proc in $managers) {
+    # 2. 兜底：通过命令行匹配残留 node 进程（排除自身）
+    $strayProcesses = Get-WmiObject Win32_Process -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -eq "node.exe" -and ($_.CommandLine -like "*claude-remote-server.js*" -or $_.CommandLine -like "*session-manager.js*") }
+    foreach ($proc in $strayProcesses) {
         try {
             Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue
-            Write-Log "Session Manager stopped (PID: $($proc.ProcessId))" "Green"
+            $label = if ($proc.CommandLine -like "*session-manager.js*") { "Session Manager" } else { "Server" }
+            Write-Log "$label stopped via command line match (PID: $($proc.ProcessId))" "Green"
         } catch {}
     }
-    if (-not $managers) {
-        Write-Log "No session manager process found" "Gray"
+
+    # 3. 兜底：通过端口查找占用进程（处理 CommandLine 为空的孤儿进程）
+    $portOwner = Get-NetTCPConnection -LocalPort $PORT -State Listen -ErrorAction SilentlyContinue |
+        Select-Object -ExpandProperty OwningProcess -First 1
+    if ($portOwner) {
+        Stop-ProcessIfExists -ProcessId $portOwner -Label "Server (port $PORT)"
     }
 
     # 清理锁文件
@@ -97,13 +130,15 @@ function Start-Server {
     if ($Env -eq "prod") {
         # 生产环境：后台运行，日志写入文件
         Ensure-LogsDir
-        Start-Process -FilePath $nodePath -ArgumentList $scriptPath -WorkingDirectory $SERVER_DIR -WindowStyle Hidden -RedirectStandardOutput $SERVER_LOG_FILE -RedirectStandardError $SERVER_ERR_FILE
-        Write-Log "Server started (background mode), log: $SERVER_LOG_FILE" "Green"
+        $proc = Start-Process -FilePath $nodePath -ArgumentList $scriptPath -WorkingDirectory $SERVER_DIR -WindowStyle Hidden -RedirectStandardOutput $SERVER_LOG_FILE -RedirectStandardError $SERVER_ERR_FILE -PassThru
+        Write-Log "Server started (PID: $($proc.Id), background mode), log: $SERVER_LOG_FILE" "Green"
     } else {
         # 开发环境：弹出窗口显示日志
-        Start-Process -FilePath $nodePath -ArgumentList $scriptPath -WorkingDirectory $SERVER_DIR -WindowStyle Normal
-        Write-Log "Server started (dev mode - visible window)" "Green"
+        $proc = Start-Process -FilePath $nodePath -ArgumentList $scriptPath -WorkingDirectory $SERVER_DIR -WindowStyle Normal -PassThru
+        Write-Log "Server started (PID: $($proc.Id), dev mode - visible window)" "Green"
     }
+
+    return $proc.Id
 }
 
 function Start-SessionManager {
@@ -115,12 +150,12 @@ function Start-SessionManager {
     if ($Env -eq "prod") {
         # 生产环境：后台运行，日志写入文件
         Ensure-LogsDir
-        Start-Process -FilePath $nodePath -ArgumentList $scriptPath -WorkingDirectory $CLIENT_DIR -WindowStyle Hidden -RedirectStandardOutput $MANAGER_LOG_FILE -RedirectStandardError $MANAGER_ERR_FILE
-        Write-Log "Session Manager started (background mode), log: $MANAGER_LOG_FILE" "Green"
+        $proc = Start-Process -FilePath $nodePath -ArgumentList $scriptPath -WorkingDirectory $CLIENT_DIR -WindowStyle Hidden -RedirectStandardOutput $MANAGER_LOG_FILE -RedirectStandardError $MANAGER_ERR_FILE -PassThru
+        Write-Log "Session Manager started (PID: $($proc.Id), background mode), log: $MANAGER_LOG_FILE" "Green"
     } else {
         # 开发环境：弹出窗口显示日志
-        Start-Process -FilePath $nodePath -ArgumentList $scriptPath -WorkingDirectory $CLIENT_DIR -WindowStyle Normal
-        Write-Log "Session Manager started (dev mode - visible window)" "Green"
+        $proc = Start-Process -FilePath $nodePath -ArgumentList $scriptPath -WorkingDirectory $CLIENT_DIR -WindowStyle Normal -PassThru
+        Write-Log "Session Manager started (PID: $($proc.Id), dev mode - visible window)" "Green"
     }
 
     # 等待锁文件创建
@@ -129,28 +164,39 @@ function Start-SessionManager {
         Start-Sleep -Milliseconds 100
         $waited += 100
     }
+
+    return $proc.Id
 }
 
 function Show-Status {
     Write-Host ""
     Write-Host "========================================" -ForegroundColor Cyan
 
-    $serverRunning = Get-WmiObject Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*claude-remote-server.js*" }
-    $managerRunning = Get-WmiObject Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*session-manager.js*" }
+    # 优先通过 PID 文件判断
+    $pids = Read-Pids
+    if ($pids) {
+        $serverAlive = $false
+        $managerAlive = $false
+        try { if (Get-Process -Id $pids.Server -ErrorAction SilentlyContinue) { $serverAlive = $true } } catch {}
+        try { if (Get-Process -Id $pids.Manager -ErrorAction SilentlyContinue) { $managerAlive = $true } } catch {}
+    } else {
+        $serverAlive = $false
+        $managerAlive = $false
+    }
 
     Write-Host "Environment: " -NoNewline
     Write-Host $Env.ToUpper() -ForegroundColor $(if ($Env -eq "prod") { "Green" } else { "Yellow" })
 
     Write-Host "Server:      " -NoNewline
-    if ($serverRunning) {
-        Write-Host "Running (PID: $($serverRunning.ProcessId))" -ForegroundColor Green
+    if ($serverAlive) {
+        Write-Host "Running (PID: $($pids.Server))" -ForegroundColor Green
     } else {
         Write-Host "Stopped" -ForegroundColor Red
     }
 
     Write-Host "Session Mgr: " -NoNewline
-    if ($managerRunning) {
-        Write-Host "Running (PID: $($managerRunning.ProcessId))" -ForegroundColor Green
+    if ($managerAlive) {
+        Write-Host "Running (PID: $($pids.Manager))" -ForegroundColor Green
     } else {
         Write-Host "Stopped" -ForegroundColor Red
     }
@@ -158,7 +204,7 @@ function Show-Status {
     Write-Host ""
     Write-Host "Access URLs:" -ForegroundColor Cyan
     Write-Host "  Server:  http://127.0.0.1:$PORT"
-    Write-Host "  Web App: http://localhost:$PORT/app"
+    Write-Host "  Web App: http://localhost:$PORT/"
     Write-Host ""
 
     if ($Env -eq "prod") {
@@ -185,17 +231,21 @@ switch ($Action) {
     "start" {
         Stop-AllServices
         Start-Sleep -Seconds 1
-        Start-Server
+        $serverPid = Start-Server
         Start-Sleep -Seconds 2
-        Start-SessionManager
+        $managerPid = Start-SessionManager
+        Save-Pids -ServerPid $serverPid -ManagerPid $managerPid
+        Start-Sleep -Seconds 2
         Show-Status
     }
     "restart" {
         Stop-AllServices
         Start-Sleep -Seconds 1
-        Start-Server
+        $serverPid = Start-Server
         Start-Sleep -Seconds 2
-        Start-SessionManager
+        $managerPid = Start-SessionManager
+        Save-Pids -ServerPid $serverPid -ManagerPid $managerPid
+        Start-Sleep -Seconds 2
         Show-Status
     }
 }

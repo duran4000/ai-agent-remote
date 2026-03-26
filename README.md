@@ -48,7 +48,7 @@ flowchart LR
 ### Windows 用户（推荐）
 
 ```powershell
-# 1. 一键安装依赖
+# 1. 一键安装依赖（自动注册开机自启计划任务，需管理员权限）
 ./install.ps1
 
 # 2. 编辑配置文件

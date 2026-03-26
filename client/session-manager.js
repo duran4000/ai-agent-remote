@@ -127,7 +127,6 @@ class SessionManager {
     this.sessions = new Map();
     this.deviceSessionMap = new Map();
     this.isConnected = false;
-    this.reconnectTimer = null;
     this.heartbeatTimer = null;
   }
 
@@ -139,11 +138,6 @@ class SessionManager {
 
   connectToServer() {
     log('Connecting to server:', this.config.serverUrl);
-
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
 
     if (this.ws) {
       this.ws.removeAllListeners();
@@ -182,7 +176,9 @@ class SessionManager {
         log('WebSocket closed:', code, reason.toString());
         this.isConnected = false;
         this.stopHeartbeat();
-        this.reconnectTimer = setTimeout(() => this.connectToServer(), 5000);
+        log('Server disconnected, exiting...');
+        this.stop();
+        process.exit(0);
       });
 
       this.ws.on('error', (error) => {
@@ -191,7 +187,8 @@ class SessionManager {
 
     } catch (err) {
       log('Connection error:', err.message);
-      this.reconnectTimer = setTimeout(() => this.connectToServer(), 5000);
+      log('Cannot connect to server, exiting...');
+      process.exit(1);
     }
   }
 
@@ -322,14 +319,14 @@ class SessionManager {
     // 根据aiAgent和sessionId查找对应的session
     const sessionKey = `${aiAgent}-${sessionId}`;
     const session = this.sessions.get(sessionKey);
-    
+
     if (session) {
       log(`[${sessionKey}] Desktop disconnected, removing session`);
-      
+
       // 发送disconnected status消息
       log(`[${sessionKey}] Sending disconnected status message`);
       log(`[${sessionKey}] Session data: sessionId=${session.sessionId}, deviceId=${session.deviceId}, wsReady=${this.ws && this.ws.readyState === WebSocket.OPEN}`);
-      
+
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         this.ws.send(JSON.stringify({
           type: MSG_TYPES.STATUS,
@@ -345,22 +342,26 @@ class SessionManager {
       } else {
         log(`[${sessionKey}] WebSocket not ready, cannot send status message`);
       }
-      
-      // 清理PTY进程
-      this.cleanupPtyProcesses(sessionId, aiAgent);
-      
-      // 杀死wrapper进程
+
+      // 杀死wrapper进程及其所有子进程（使用 /T 参数杀死进程树）
       if (session.wrapperPid) {
         try {
           const isWindows = process.platform === 'win32';
           if (isWindows) {
-            execSync(`taskkill /F /PID ${session.wrapperPid}`, { encoding: 'utf8' });
+            // /T 参数会杀死指定进程及其所有子进程（包括 claude.exe）
+            execSync(`taskkill /F /T /PID ${session.wrapperPid}`, { encoding: 'utf8' });
           } else {
-            execSync(`kill -9 ${session.wrapperPid}`, { encoding: 'utf8' });
+            // Linux/Mac: 杀死进程组
+            try {
+              process.kill(-session.wrapperPid, 'SIGKILL');
+            } catch (e) {
+              // 如果进程组不存在，尝试只杀死进程
+              execSync(`kill -9 ${session.wrapperPid}`, { encoding: 'utf8' });
+            }
           }
-          log(`[${sessionKey}] Wrapper process killed: PID ${session.wrapperPid}`);
+          log(`[${sessionKey}] Wrapper process tree killed: PID ${session.wrapperPid}`);
         } catch (error) {
-          log(`[${sessionKey}] Failed to kill wrapper process: ${error.message}`);
+          log(`[${sessionKey}] Failed to kill wrapper process tree: ${error.message}`);
         }
       } else if (session.wrapper && !session.wrapper.killed) {
         try {
@@ -370,7 +371,7 @@ class SessionManager {
           log(`[${sessionKey}] Failed to kill wrapper: ${error.message}`);
         }
       }
-      
+
       this.sessions.delete(sessionKey);
     } else {
       log(`[${sessionKey}] Session not found for desktop disconnect`);
@@ -541,60 +542,39 @@ class SessionManager {
   cleanupPtyProcesses(sessionId, aiAgent = 'claude') {
     const normalizedSessionId = sessionId.replace(/\\/g, '/').toLowerCase();
     const isWindows = process.platform === 'win32';
-    
+
     try {
       if (isWindows) {
-        // Windows: 杀死包含sessionId的claude.exe进程（PTY进程）
-        const result = execSync('wmic process where "name=\'claude.exe\'" get processid,commandline /format:csv', { encoding: 'utf8' });
-        const lines = result.split('\n').slice(1);
-        
+        // Windows: 使用 WMIC 查找进程树
+        // 首先查找 wrapper 进程（node.exe 运行 claude-pty-wrapper.js）
+        const wrapperResult = execSync('wmic process where "name=\'node.exe\'" get processid,commandline /format:csv', { encoding: 'utf8' });
+        const lines = wrapperResult.split('\n').slice(1);
+
         for (const line of lines) {
-          if (line.includes(normalizedSessionId)) {
-            const parts = line.split(',');
-            const pid = parts[parts.length - 1].trim();
-            
-            if (pid && !isNaN(pid)) {
-              try {
-                execSync(`taskkill /F /PID ${pid}`, { encoding: 'utf8' });
-                log(`[${normalizedSessionId}] Killed PTY process: PID ${pid}`);
-              } catch (killError) {
-                log(`[${normalizedSessionId}] Failed to kill PTY process ${pid}: ${killError.message}`);
-              }
-            }
-          }
-        }
-        
-        // 同时也杀死可能的conhost.exe进程
-        const conhostResult = execSync('wmic process where "name=\'conhost.exe\'" get processid,commandline /format:csv', { encoding: 'utf8' });
-        const conhostLines = conhostResult.split('\n').slice(1);
-        
-        for (const line of conhostLines) {
-          if (line.includes(normalizedSessionId)) {
-            const parts = line.split(',');
-            const pid = parts[parts.length - 1].trim();
-            
-            if (pid && !isNaN(pid)) {
-              try {
-                execSync(`taskkill /F /PID ${pid}`, { encoding: 'utf8' });
-                log(`[${normalizedSessionId}] Killed conhost process: PID ${pid}`);
-              } catch (killError) {
-                log(`[${normalizedSessionId}] Failed to kill conhost process ${pid}: ${killError.message}`);
+          if (line.includes('claude-pty-wrapper') && line.includes(normalizedSessionId)) {
+            const lastCommaIndex = line.lastIndexOf(',');
+            if (lastCommaIndex !== -1) {
+              const wrapperPid = line.substring(lastCommaIndex + 1).trim();
+
+              if (wrapperPid && !isNaN(wrapperPid)) {
+                // 使用 taskkill /F /T 杀死 wrapper 进程及其所有子进程
+                try {
+                  execSync(`taskkill /F /T /PID ${wrapperPid}`, { encoding: 'utf8', timeout: 10000 });
+                  log(`[${normalizedSessionId}] Killed wrapper process tree: PID ${wrapperPid}`);
+                } catch (killError) {
+                  log(`[${normalizedSessionId}] Failed to kill wrapper tree ${wrapperPid}: ${killError.message}`);
+                }
               }
             }
           }
         }
       } else {
-        // Linux/Mac: 杀死包含sessionId的进程
-        const result = execSync(`ps aux | grep "${normalizedSessionId}" | grep -v grep | awk '{print $2}'`, { encoding: 'utf8' });
-        const pids = result.trim().split('\n').filter(pid => pid);
-        
-        for (const pid of pids) {
-          try {
-            execSync(`kill -9 ${pid}`, { encoding: 'utf8' });
-            log(`[${normalizedSessionId}] Killed PTY process: PID ${pid}`);
-          } catch (killError) {
-            log(`[${normalizedSessionId}] Failed to kill PTY process ${pid}: ${killError.message}`);
-          }
+        // Linux/Mac: 使用 pkill 杀死进程组
+        try {
+          execSync(`pkill -f "claude-pty-wrapper.*${normalizedSessionId}"`, { encoding: 'utf8' });
+          log(`[${normalizedSessionId}] Killed wrapper processes`);
+        } catch (killError) {
+          log(`[${normalizedSessionId}] Failed to kill wrapper processes: ${killError.message}`);
         }
       }
     } catch (error) {
@@ -656,12 +636,13 @@ class SessionManager {
     let spawnCmd, spawnArgs, spawnOptions;
     
     if (isWindows) {
-      // Windows: 使用start命令在新窗口中启动wrapper
+      // Windows: 直接 spawn cmd.exe /c start，避免 shell:true 创建多余的 cmd 窗口
+      // cmd.exe 由 windowsHide:true 隐藏，start 创建的唯一窗口可见
       const windowTitle = `"${aiAgent.toUpperCase()}"`;
-      // 包含空格的参数需要用引号包裹
       const quotedClaudePath = claudePath.includes(' ') ? `"${claudePath}"` : claudePath;
 
       spawnArgs = [
+        '/c',
         'start',
         windowTitle,
         '/wait',
@@ -679,9 +660,9 @@ class SessionManager {
         const quotedFallbackPath = fallbackPath.includes(' ') ? `"${fallbackPath}"` : fallbackPath;
         spawnArgs.push('--fallback-path', quotedFallbackPath);
       }
-      
-      log(`[${sessionKey}] CMD command: start ${windowTitle} /wait node ${wrapperPath} ...`);
-      
+
+      log(`[${sessionKey}] CMD: cmd /c start ${windowTitle} /wait node ${wrapperPath} ...`);
+
       spawnOptions = {
         cwd: workDir,
         env: {
@@ -691,8 +672,7 @@ class SessionManager {
         },
         stdio: ['ignore', 'pipe', 'pipe'],
         detached: true,
-        windowsHide: false,
-        shell: true
+        windowsHide: true
       };
     } else {
       // Linux/Mac: 使用node执行wrapper.js
@@ -722,10 +702,12 @@ class SessionManager {
       };
     }
 
-    const wrapper = spawn(spawnArgs[0], spawnArgs.slice(1), spawnOptions);
+    const spawnExe = isWindows ? 'cmd.exe' : 'node';
+    const wrapper = spawn(spawnExe, spawnArgs, spawnOptions);
     
     const session = {
       wrapper,
+      wrapperPid: wrapper.pid,
       workDir,
       aiAgent,
       startTime: Date.now(),
@@ -832,9 +814,6 @@ class SessionManager {
 
   stop() {
     this.stopHeartbeat();
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-    }
     for (const [sessionId, session] of this.sessions) {
       log(`Stopping wrapper for session ${sessionId}`);
       if (session.wrapper && !session.wrapper.killed) {

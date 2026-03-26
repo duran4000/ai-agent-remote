@@ -84,6 +84,62 @@ function Setup-Config {
     }
 }
 
+function Install-ScheduledTask {
+    $TASK_NAME = "ClaudeRemoteControl"
+    $BAT_PATH = Join-Path $SCRIPT_DIR "start.bat"
+
+    Write-Log "Setting up scheduled task..." "Cyan"
+
+    # 检查管理员权限，不足则自动提权
+    $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    if (-not $isAdmin) {
+        Write-Log "需要管理员权限来注册计划任务，正在提权..." "Yellow"
+        try {
+            Start-Process powershell -Verb RunAs -Wait -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"
+                Unregister-ScheduledTask -TaskName '$TASK_NAME' -Confirm:`$false -ErrorAction SilentlyContinue
+                schtasks /Create /TN '$TASK_NAME' /TR 'cmd.exe /c \`"$BAT_PATH\`"' /SC ONLOGON /RL HIGHEST /F
+            `""
+            $verify = Get-ScheduledTask -TaskName $TASK_NAME -ErrorAction SilentlyContinue
+            if ($verify) {
+                Write-Log "Scheduled task '$TASK_NAME' registered (runs at user logon)" "Green"
+            } else {
+                Write-Log "WARNING: Failed to register scheduled task" "Red"
+            }
+        } catch {
+            Write-Log "WARNING: UAC elevation was denied, task not registered" "Red"
+        }
+        return
+    }
+
+    # 管理员权限下直接注册
+    $existing = Get-ScheduledTask -TaskName $TASK_NAME -ErrorAction SilentlyContinue
+    if ($existing) {
+        Write-Log "Scheduled task '$TASK_NAME' already exists, updating..." "Yellow"
+        Unregister-ScheduledTask -TaskName $TASK_NAME -Confirm:$false
+    }
+
+    $trigger = New-ScheduledTaskTrigger -AtLogOn
+    $action = New-ScheduledTaskAction `
+        -Execute "cmd.exe" `
+        -Argument "/c `"$BAT_PATH`"" `
+        -WorkingDirectory $SCRIPT_DIR
+    $settings = New-ScheduledTaskSettingsSet `
+        -AllowStartIfOnBatteries `
+        -DontStopIfGoingOnBatteries `
+        -StartWhenAvailable `
+        -ExecutionTimeLimit (New-TimeSpan -Days 0)
+
+    Register-ScheduledTask `
+        -TaskName $TASK_NAME `
+        -Trigger $trigger `
+        -Action $action `
+        -Settings $settings `
+        -Description "Auto-start Claude Remote Control at user logon" `
+        -Force | Out-Null
+
+    Write-Log "Scheduled task '$TASK_NAME' registered (runs at user logon)" "Green"
+}
+
 # 主流程
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
@@ -100,6 +156,9 @@ Write-Host ""
 Setup-Config
 Write-Host ""
 
+Install-ScheduledTask
+Write-Host ""
+
 Write-Host "========================================" -ForegroundColor Green
 Write-Host "Installation Complete!" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
@@ -108,6 +167,7 @@ Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "  1. Edit config.json (set token and password)" -ForegroundColor White
 Write-Host "  2. Run start.bat to start services" -ForegroundColor White
 Write-Host "  3. Open http://localhost:$PORT in browser" -ForegroundColor White
+Write-Host "  4. Services will auto-start on next user login" -ForegroundColor White
 Write-Host ""
 
 Read-Host "Press Enter to exit"

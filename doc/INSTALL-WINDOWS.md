@@ -40,6 +40,25 @@ notepad config.json
 ./start.bat
 ```
 
+## 开机自启
+
+`install.ps1` 会自动注册一个 Windows 计划任务 `ClaudeRemoteControl`，在用户登录时自动运行 `start.bat`。
+
+> **注意**：注册计划任务需要管理员权限，脚本会自动弹出 UAC 提权。
+
+如需手动管理计划任务：
+
+```powershell
+# 查看任务状态
+schtasks /Query /TN "ClaudeRemoteControl"
+
+# 手动运行（测试）
+schtasks /Run /TN "ClaudeRemoteControl"
+
+# 删除自启任务
+schtasks /Delete /TN "ClaudeRemoteControl" /F
+```
+
 ## 服务管理
 
 ```powershell

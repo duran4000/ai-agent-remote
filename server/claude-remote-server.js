@@ -609,7 +609,7 @@ const wss = new WebSocketServer({ server });
 app.use(express.json());
 app.use(express.static(join(__dirname, 'webapp')));
 
-app.get('/app', (req, res) => {
+app.get('/', (req, res) => {
   res.sendFile(join(__dirname, 'webapp', 'index.html'));
 });
 
@@ -890,5 +890,5 @@ server.listen(PORT, HOST, () => {
   console.log(`[Server] Claude Remote Control Server`);
   console.log(`[Server] Running at http://${HOST}:${PORT}`);
   console.log(`[Server] WebSocket: ws://${HOST}:${PORT}`);
-  console.log(`[Server] Web App: http://${HOST}:${PORT}/app`);
+  console.log(`[Server] Web App: http://${HOST}:${PORT}/`);
 });
