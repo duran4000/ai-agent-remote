@@ -1,5 +1,5 @@
-# Claude Remote Control Service Manager
-# 支持开发环境(Dev)和生产环境(Prod)模式
+﻿# Claude Remote Control Service Manager
+# 鏀寔寮€鍙戠幆澧?Dev)鍜岀敓浜х幆澧?Prod)妯″紡
 
 param(
     [Parameter(Position=0)]
@@ -19,13 +19,13 @@ $SERVER_DIR = Join-Path $PROJECT_DIR "server"
 $CLIENT_DIR = Join-Path $PROJECT_DIR "client"
 $LOGS_DIR = Join-Path $PROJECT_DIR "logs"
 
-# 从 config.json 读取端口配置
+# 浠?config.json 璇诲彇绔彛閰嶇疆
 $ConfigFile = Join-Path $PROJECT_DIR "config.json"
 if (Test-Path $ConfigFile) {
     $Config = Get-Content $ConfigFile | ConvertFrom-Json
     $PORT = $Config.server.port
 } else {
-    $PORT = 41491  # 默认端口（config.json 不存在时使用）
+    $PORT = 41491  # 榛樿绔彛锛坈onfig.json 涓嶅瓨鍦ㄦ椂浣跨敤锛?
 }
 
 $SERVER_LOCK_FILE = Join-Path $SERVER_DIR "server.lock"
@@ -50,7 +50,7 @@ function Ensure-LogsDir {
 
 function Save-Pids {
     param([int]$ServerPid, [int]$ManagerPid)
-    Ensure-LogsDir  # .pids 放在 logs/ 目录
+    Ensure-LogsDir  # .pids 鏀惧湪 logs/ 鐩綍
     $pidFilePath = Join-Path $LOGS_DIR "service.pids"
     "${ServerPid},${ManagerPid}" | Out-File -FilePath $pidFilePath -Encoding utf8 -NoNewline
 }
@@ -79,20 +79,20 @@ function Stop-ProcessIfExists {
 function Stop-AllServices {
     Write-Log "Stopping all services..." "Yellow"
 
-    # 1. 优先通过 PID 文件停止
+    # 1. 浼樺厛閫氳繃 PID 鏂囦欢鍋滄
     $pids = Read-Pids
     if ($pids) {
         Stop-ProcessIfExists -ProcessId $pids.Manager -Label "Session Manager"
         Stop-ProcessIfExists -ProcessId $pids.Server -Label "Server"
-        # 清理 PID 文件
+        # 娓呯悊 PID 鏂囦欢
         $pidFilePath = Join-Path $LOGS_DIR "service.pids"
         if (Test-Path $pidFilePath) { Remove-Item $pidFilePath -Force -ErrorAction SilentlyContinue }
         Start-Sleep -Milliseconds 500
     }
 
-    # 2. 兜底：通过命令行匹配残留 node 进程（排除自身）
+    # 2. 鍏滃簳锛氶€氳繃鍛戒护琛屽尮閰嶆畫鐣?node 杩涚▼锛堟帓闄よ嚜韬級
     $strayProcesses = Get-WmiObject Win32_Process -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -eq "node.exe" -and ($_.CommandLine -like "*claude-remote-server.js*" -or $_.CommandLine -like "*session-manager.js*") }
+        Where-Object { $_.Name -eq "node.exe" -and ($_.CommandLine -like "*ai-agent-server.js*" -or $_.CommandLine -like "*session-manager.js*") }
     foreach ($proc in $strayProcesses) {
         try {
             Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue
@@ -101,14 +101,14 @@ function Stop-AllServices {
         } catch {}
     }
 
-    # 3. 兜底：通过端口查找占用进程（处理 CommandLine 为空的孤儿进程）
+    # 3. 鍏滃簳锛氶€氳繃绔彛鏌ユ壘鍗犵敤杩涚▼锛堝鐞?CommandLine 涓虹┖鐨勫鍎胯繘绋嬶級
     $portOwner = Get-NetTCPConnection -LocalPort $PORT -State Listen -ErrorAction SilentlyContinue |
         Select-Object -ExpandProperty OwningProcess -First 1
     if ($portOwner) {
         Stop-ProcessIfExists -ProcessId $portOwner -Label "Server (port $PORT)"
     }
 
-    # 清理锁文件
+    # 娓呯悊閿佹枃浠?
     if (Test-Path $SERVER_LOCK_FILE) { Remove-Item $SERVER_LOCK_FILE -Force -ErrorAction SilentlyContinue }
     if (Test-Path $MANAGER_LOCK_FILE) { Remove-Item $MANAGER_LOCK_FILE -Force -ErrorAction SilentlyContinue }
 
@@ -125,20 +125,42 @@ function Start-Server {
         exit 1
     }
 
-    $scriptPath = Join-Path $SERVER_DIR "claude-remote-server.js"
+    $scriptPath = Join-Path $SERVER_DIR "ai-agent-server.js"
 
     if ($Env -eq "prod") {
-        # 生产环境：后台运行，日志写入文件
+        # 鐢熶骇鐜锛氬悗鍙拌繍琛岋紝鏃ュ織鍐欏叆鏂囦欢
         Ensure-LogsDir
         $proc = Start-Process -FilePath $nodePath -ArgumentList $scriptPath -WorkingDirectory $SERVER_DIR -WindowStyle Hidden -RedirectStandardOutput $SERVER_LOG_FILE -RedirectStandardError $SERVER_ERR_FILE -PassThru
         Write-Log "Server started (PID: $($proc.Id), background mode), log: $SERVER_LOG_FILE" "Green"
     } else {
-        # 开发环境：弹出窗口显示日志
+        # 寮€鍙戠幆澧冿細寮瑰嚭绐楀彛鏄剧ず鏃ュ織
         $proc = Start-Process -FilePath $nodePath -ArgumentList $scriptPath -WorkingDirectory $SERVER_DIR -WindowStyle Normal -PassThru
         Write-Log "Server started (PID: $($proc.Id), dev mode - visible window)" "Green"
     }
 
     return $proc.Id
+}
+
+function Wait-ForServerHealthy {
+    param([int]$TimeoutSeconds = 30)
+    $waited = 0
+    $interval = 500
+
+    Write-Log "Waiting for server to be ready..." "Yellow"
+
+    while ($waited -lt ($TimeoutSeconds * 1000)) {
+        $conn = Get-NetTCPConnection -LocalPort $PORT -State Listen -ErrorAction SilentlyContinue
+        if ($conn) {
+            Write-Log "Server is ready (port $PORT listening)" "Green"
+            return $true
+        }
+
+        Start-Sleep -Milliseconds $interval
+        $waited += $interval
+    }
+
+    Write-Log "Server ready check timeout after $TimeoutSeconds seconds" "Red"
+    return $false
 }
 
 function Start-SessionManager {
@@ -148,17 +170,17 @@ function Start-SessionManager {
     $scriptPath = Join-Path $CLIENT_DIR "session-manager.js"
 
     if ($Env -eq "prod") {
-        # 生产环境：后台运行，日志写入文件
+        # 鐢熶骇鐜锛氬悗鍙拌繍琛岋紝鏃ュ織鍐欏叆鏂囦欢
         Ensure-LogsDir
         $proc = Start-Process -FilePath $nodePath -ArgumentList $scriptPath -WorkingDirectory $CLIENT_DIR -WindowStyle Hidden -RedirectStandardOutput $MANAGER_LOG_FILE -RedirectStandardError $MANAGER_ERR_FILE -PassThru
         Write-Log "Session Manager started (PID: $($proc.Id), background mode), log: $MANAGER_LOG_FILE" "Green"
     } else {
-        # 开发环境：弹出窗口显示日志
+        # 寮€鍙戠幆澧冿細寮瑰嚭绐楀彛鏄剧ず鏃ュ織
         $proc = Start-Process -FilePath $nodePath -ArgumentList $scriptPath -WorkingDirectory $CLIENT_DIR -WindowStyle Normal -PassThru
         Write-Log "Session Manager started (PID: $($proc.Id), dev mode - visible window)" "Green"
     }
 
-    # 等待锁文件创建
+    # 绛夊緟閿佹枃浠跺垱寤?
     $waited = 0
     while (-not (Test-Path $MANAGER_LOCK_FILE) -and $waited -lt 3000) {
         Start-Sleep -Milliseconds 100
@@ -172,7 +194,7 @@ function Show-Status {
     Write-Host ""
     Write-Host "========================================" -ForegroundColor Cyan
 
-    # 优先通过 PID 文件判断
+    # 浼樺厛閫氳繃 PID 鏂囦欢鍒ゆ柇
     $pids = Read-Pids
     if ($pids) {
         $serverAlive = $false
@@ -219,14 +241,18 @@ function Start-Services {
     Stop-AllServices
     Start-Sleep -Seconds 1
     $serverPid = Start-Server
-    Start-Sleep -Seconds 2
+    # 等待服务器完全就绪后再启动 Session Manager
+    if (-not (Wait-ForServerHealthy -TimeoutSeconds 30)) {
+        Write-Log "Server failed to become healthy, aborting..." "Red"
+        exit 1
+    }
     $managerPid = Start-SessionManager
     Save-Pids -ServerPid $serverPid -ManagerPid $managerPid
     Start-Sleep -Seconds 2
     Show-Status
 }
 
-# 主逻辑
+# 涓婚€昏緫
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Claude Remote Control - Service Manager" -ForegroundColor Cyan
@@ -243,7 +269,11 @@ switch ($Action) {
         Stop-AllServices
         Start-Sleep -Seconds 1
         $serverPid = Start-Server
-        Start-Sleep -Seconds 2
+        # 等待服务器完全就绪后再启动 Session Manager
+        if (-not (Wait-ForServerHealthy -TimeoutSeconds 30)) {
+            Write-Log "Server failed to become healthy, aborting..." "Red"
+            exit 1
+        }
         $managerPid = Start-SessionManager
         Save-Pids -ServerPid $serverPid -ManagerPid $managerPid
         Start-Sleep -Seconds 2
