@@ -142,7 +142,7 @@ function Start-Server {
 }
 
 function Wait-ForServerHealthy {
-    param([int]$TimeoutSeconds = 60)
+    param([int]$TimeoutSeconds = 30)
     $waited = 0
     $interval = 500
 
