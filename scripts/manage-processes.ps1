@@ -29,22 +29,22 @@ function Get-ClaudeProcesses {
     try {
         $processes = Get-WmiObject Win32_Process | Where-Object {
             $_.Name -eq "node.exe" -and 
-            $_.CommandLine -like "*claude-remote-server.js*" -or
+            $_.CommandLine -like "*ai-agent-server.js*" -or
             $_.CommandLine -like "*session-manager.js*" -or
-            $_.CommandLine -like "*claude-pty-wrapper.js*"
+            $_.CommandLine -like "*ai-agent-pty-wrapper.js*"
         }
         
         $result = @()
         foreach ($proc in $processes) {
             $type = "Unknown"
-            if ($proc.CommandLine -like "*claude-remote-server.js*") { 
+            if ($proc.CommandLine -like "*ai-agent-server.js*") { 
                 $type = "Server" 
             } elseif ($proc.CommandLine -like "*session-manager.js*") { 
                 $type = "SessionManager" 
-            } elseif ($proc.CommandLine -like "*claude-pty-wrapper.js*") { 
+            } elseif ($proc.CommandLine -like "*ai-agent-pty-wrapper.js*") { 
                 $type = "Wrapper"
                 
-                if ($proc.CommandLine -match 'claude-pty-wrapper\.js\s+"?([^"\s]+)"?') {
+                if ($proc.CommandLine -match 'ai-agent-pty-wrapper\.js\s+"?([^"\s]+)"?') {
                     $sessionId = $matches[1]
                 } else {
                     $sessionId = "N/A"

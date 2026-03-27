@@ -104,7 +104,7 @@ setAIAgent(aiAgent) {
 this.terminal.setAIAgent(aiAgent);
 ```
 
-3. `client/claude-pty-wrapper.js`:
+3. `client/ai-agent-pty-wrapper.js`:
 ```javascript
 isFocusEventSequence(data) {
   // 基础过滤（所有AI Agent）
@@ -380,7 +380,7 @@ function handleDesktopConnection(ws, sessionId) {
 
 ```powershell
 # 查看服务器日志
-type %TEMP%\claude-remote-server.log
+type %TEMP%\ai-agent-server.log
 
 # 查看Session Manager日志
 type %TEMP%\session-manager.log
@@ -393,7 +393,7 @@ type %TEMP%\session-manager.log
 tasklist | findstr node
 
 # 查看特定进程
-tasklist | findstr "claude-remote"
+tasklist | findstr "ai-agent"
 ```
 
 ### 检查端口

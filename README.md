@@ -76,7 +76,7 @@ cp config.example.json config.json
 # 编辑 config.json，设置 token 和 authPassword
 
 # 3. 启动服务器
-cd server && node claude-remote-server.js &
+cd server && node ai-agent-server.js &
 
 # 4. 启动 Session Manager（另一个终端）
 cd client && node session-manager.js
@@ -89,15 +89,15 @@ cd client && node session-manager.js
 ## 目录结构
 
 ```
-claude-remote-control/
+ai-agent-remote/
 ├── config.example.json   # 配置模板
 ├── config.json           # 配置文件（需自行创建，不提交到git）
 ├── server/               # 中转服务器
-│   ├── claude-remote-server.js
+│   ├── ai-agent-server.js
 │   ├── webapp/          # Web App
 │   └── package.json
 ├── client/              # 桌面端程序
-│   ├── claude-pty-wrapper.js
+│   ├── ai-agent-pty-wrapper.js
 │   ├── session-manager.js
 │   └── package.json
 ├── scripts/             # 管理脚本
@@ -159,7 +159,7 @@ cd deploy
 4. 使用 PM2 启动：
 
 ```bash
-pm2 start claude-remote-server.js --name claude-remote
+pm2 start ai-agent-server.js --name ai-agent
 pm2 save
 pm2 startup
 ```

@@ -1,6 +1,6 @@
-# Claude Remote Control - Windows 安装脚本
-# 用法: 右键 -> 使用 PowerShell 运行
-# 或在 PowerShell 中执行: ./install.ps1
+﻿# Claude Remote Control - Windows 瀹夎鑴氭湰
+# 鐢ㄦ硶: 鍙抽敭 -> 浣跨敤 PowerShell 杩愯
+# 鎴栧湪 PowerShell 涓墽琛? ./install.ps1
 
 $ErrorActionPreference = "Stop"
 
@@ -10,12 +10,12 @@ $CLIENT_DIR = Join-Path $SCRIPT_DIR "client"
 $CONFIG_FILE = Join-Path $SCRIPT_DIR "config.json"
 $CONFIG_EXAMPLE = Join-Path $SCRIPT_DIR "config.example.json"
 
-# 从 config.json 读取端口（如果存在）
+# 浠?config.json 璇诲彇绔彛锛堝鏋滃瓨鍦級
 if (Test-Path $CONFIG_FILE) {
     $Config = Get-Content $CONFIG_FILE | ConvertFrom-Json
     $PORT = $Config.server.port
 } else {
-    $PORT = 41491  # 默认端口
+    $PORT = 41491  # 榛樿绔彛
 }
 
 function Write-Log {
@@ -42,7 +42,7 @@ function Check-NodeJS {
 function Install-Dependencies {
     Write-Log "Installing dependencies..." "Cyan"
 
-    # 安装 server 依赖
+    # 瀹夎 server 渚濊禆
     Write-Log "Installing server dependencies..." "Yellow"
     Push-Location $SERVER_DIR
     npm install
@@ -54,7 +54,7 @@ function Install-Dependencies {
     Pop-Location
     Write-Log "Server dependencies installed" "Green"
 
-    # 安装 client 依赖
+    # 瀹夎 client 渚濊禆
     Write-Log "Installing client dependencies..." "Yellow"
     Push-Location $CLIENT_DIR
     npm install
@@ -90,14 +90,14 @@ function Install-ScheduledTask {
 
     Write-Log "Setting up scheduled task..." "Cyan"
 
-    # 检查管理员权限，不足则自动提权
+    # 妫€鏌ョ鐞嗗憳鏉冮檺锛屼笉瓒冲垯鑷姩鎻愭潈
     $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
     if (-not $isAdmin) {
-        Write-Log "需要管理员权限来注册计划任务，正在提权..." "Yellow"
+        Write-Log "闇€瑕佺鐞嗗憳鏉冮檺鏉ユ敞鍐岃鍒掍换鍔★紝姝ｅ湪鎻愭潈..." "Yellow"
         try {
             Start-Process powershell -Verb RunAs -Wait -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"
                 Unregister-ScheduledTask -TaskName '$TASK_NAME' -Confirm:`$false -ErrorAction SilentlyContinue
-                schtasks /Create /TN '$TASK_NAME' /TR 'cmd.exe /c \`"$BAT_PATH\`"' /SC ONLOGON /RL HIGHEST /F
+                schtasks /Create /TN '$TASK_NAME' /TR 'cmd.exe /k \`"$BAT_PATH\`"' /SC ONLOGON /RL HIGHEST /F
             `""
             $verify = Get-ScheduledTask -TaskName $TASK_NAME -ErrorAction SilentlyContinue
             if ($verify) {
@@ -111,7 +111,7 @@ function Install-ScheduledTask {
         return
     }
 
-    # 管理员权限下直接注册
+    # 绠＄悊鍛樻潈闄愪笅鐩存帴娉ㄥ唽
     $existing = Get-ScheduledTask -TaskName $TASK_NAME -ErrorAction SilentlyContinue
     if ($existing) {
         Write-Log "Scheduled task '$TASK_NAME' already exists, updating..." "Yellow"
@@ -121,7 +121,7 @@ function Install-ScheduledTask {
     $trigger = New-ScheduledTaskTrigger -AtLogOn
     $action = New-ScheduledTaskAction `
         -Execute "cmd.exe" `
-        -Argument "/c `"$BAT_PATH`"" `
+        -Argument "/k `"$BAT_PATH`"" `
         -WorkingDirectory $SCRIPT_DIR
     $settings = New-ScheduledTaskSettingsSet `
         -AllowStartIfOnBatteries `
@@ -140,7 +140,7 @@ function Install-ScheduledTask {
     Write-Log "Scheduled task '$TASK_NAME' registered (runs at user logon)" "Green"
 }
 
-# 主流程
+# 涓绘祦绋?
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Claude Remote Control - Installer" -ForegroundColor Cyan

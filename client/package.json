@@ -1,11 +1,11 @@
 {
-  "name": "claude-remote-mcp",
+  "name": "ai-agent-client",
   "version": "1.0.0",
-  "description": "MCP Server for Claude Remote Control",
+  "description": "AI Agent Remote Control - Client",
   "main": "index.js",
   "type": "module",
   "bin": {
-    "claude-remote-mcp": "./index.js"
+    "ai-agent-client": "./index.js"
   },
   "scripts": {
     "start": "node index.js"

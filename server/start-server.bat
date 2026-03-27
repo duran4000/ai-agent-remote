@@ -51,7 +51,7 @@ if %errorlevel% equ 0 (
 
 echo.
 echo [2/3] Starting server...
-node claude-remote-server.js
+node ai-agent-server.js
 
 if %errorlevel% neq 0 (
     echo.

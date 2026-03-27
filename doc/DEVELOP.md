@@ -212,12 +212,12 @@ Content-Type: application/json
 ```
 ai-agent-remote/
 ├── client/              # 客户端（桌面端）
-│   ├── claude-pty-wrapper.js    # PTY代理Wrapper
+│   ├── ai-agent-pty-wrapper.js    # PTY代理Wrapper
 │   ├── session-manager.js        # 会话管理器
 │   ├── session-manager.bat        # 启动脚本
 │   └── package.json
 ├── server/              # 服务端
-│   ├── claude-remote-server.js  # Web Server
+│   ├── ai-agent-server.js  # Web Server
 │   ├── webapp/         # Web App
 │   │   ├── index.html
 │   │   ├── css/

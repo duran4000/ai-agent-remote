@@ -12,7 +12,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const LOCK_FILE = join(__dirname, 'server.lock');
-const LOG_FILE = join(process.env.TEMP || '/tmp', 'claude-remote-server.log');
+const LOG_FILE = join(process.env.TEMP || '/tmp', 'ai-agent-server.log');
 
 function logToFile(message) {
   const timestamp = new Date().toISOString();

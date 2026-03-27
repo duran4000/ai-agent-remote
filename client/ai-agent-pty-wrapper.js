@@ -12,7 +12,7 @@ import { getServerUrl, getServerToken, getWrapperDefaults, getAIModelPath, loadC
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const LOG_FILE = path.join(os.tmpdir(), 'claude-pty-wrapper.log');
+const LOG_FILE = path.join(os.tmpdir(), 'ai-agent-pty-wrapper.log');
 const MSG_TYPES = {
   COMMAND: 'command',
   OUTPUT: 'output',
@@ -79,8 +79,8 @@ class ClaudePtyWrapper {
     const config = {
       serverUrl: getServerUrl(),
       token: getServerToken(),
-      sessionId: 'claude-remote-default',
-      deviceId: 'claude-desktop-main',
+      sessionId: 'ai-agent-default',
+      deviceId: 'ai-agent-desktop-main',
       claudePath: defaults.defaultClaudePath || 'claude',
       cols: defaults.defaultCols,
       rows: defaults.defaultRows

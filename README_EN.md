@@ -76,7 +76,7 @@ cp config.example.json config.json
 # Edit config.json, set token and authPassword
 
 # 3. Start server
-cd server && node claude-remote-server.js &
+cd server && node ai-agent-server.js &
 
 # 4. Start Session Manager (another terminal)
 cd client && node session-manager.js
@@ -89,15 +89,15 @@ cd client && node session-manager.js
 ## Directory Structure
 
 ```
-claude-remote-control/
+ai-agent-remote/
 ├── config.example.json   # Config template
 ├── config.json           # Config file (create yourself, not committed to git)
 ├── server/               # Relay server
-│   ├── claude-remote-server.js
+│   ├── ai-agent-server.js
 │   ├── webapp/          # Web App
 │   └── package.json
 ├── client/              # Desktop client
-│   ├── claude-pty-wrapper.js
+│   ├── ai-agent-pty-wrapper.js
 │   ├── session-manager.js
 │   └── package.json
 ├── scripts/             # Management scripts
@@ -159,7 +159,7 @@ cd deploy
 4. Start with PM2:
 
 ```bash
-pm2 start claude-remote-server.js --name claude-remote
+pm2 start ai-agent-server.js --name ai-agent
 pm2 save
 pm2 startup
 ```

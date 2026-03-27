@@ -435,7 +435,7 @@ class SessionManager {
       for (const line of lines) {
         const parsed = parseProcessLine(line);
         if (!parsed) continue;
-        if (!line.includes('claude-pty-wrapper') || !parsed.commandLine.includes(normalizedSessionId)) continue;
+        if (!line.includes('ai-agent-pty-wrapper') || !parsed.commandLine.includes(normalizedSessionId)) continue;
 
         const claudePath = extractArgValue(line, 'claude-path');
         const existingAiAgent = extractArgValue(line, 'ai-model');
@@ -476,7 +476,7 @@ class SessionManager {
       const lines = getNodeProcesses();
 
       for (const line of lines) {
-        if (!line.includes('claude-pty-wrapper') || !line.includes(sessionId)) continue;
+        if (!line.includes('ai-agent-pty-wrapper') || !line.includes(sessionId)) continue;
         const parsed = parseProcessLine(line);
         if (!parsed) continue;
 
@@ -503,7 +503,7 @@ class SessionManager {
       if (process.platform === 'win32') {
         const lines = getNodeProcesses();
         for (const line of lines) {
-          if (!line.includes('claude-pty-wrapper') || !line.includes(normalizedSessionId)) continue;
+          if (!line.includes('ai-agent-pty-wrapper') || !line.includes(normalizedSessionId)) continue;
           const parsed = parseProcessLine(line);
           if (!parsed) continue;
 
@@ -516,7 +516,7 @@ class SessionManager {
         }
       } else {
         try {
-          execSync(`pkill -f "claude-pty-wrapper.*${normalizedSessionId}"`, { encoding: 'utf8' });
+          execSync(`pkill -f "ai-agent-pty-wrapper.*${normalizedSessionId}"`, { encoding: 'utf8' });
           log(`[${normalizedSessionId}] Killed wrapper processes`);
         } catch (killError) {
           log(`[${normalizedSessionId}] Failed to kill wrapper processes: ${killError.message}`);
@@ -530,7 +530,7 @@ class SessionManager {
   startWrapper(sessionId, workDir, claudePath, fallbackPath, aiAgent = 'claude') {
     const normalizedSessionId = sessionId.replace(/\\/g, '/').toLowerCase();
     const sessionKey = `${aiAgent}-${normalizedSessionId}`;
-    const wrapperPath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'claude-pty-wrapper.js');
+    const wrapperPath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'ai-agent-pty-wrapper.js');
     
     const isWindows = process.platform === 'win32';
     

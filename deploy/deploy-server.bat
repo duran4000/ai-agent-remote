@@ -33,8 +33,8 @@ wsl sshpass -p "%SERVER_PASSWORD%" ssh %SERVER% "mkdir -p %REMOTE_DIR%/webapp/js
 wsl sshpass -p "%SERVER_PASSWORD%" ssh %SERVER% "mkdir -p %REMOTE_DIR%/../utils"
 
 REM 部署服务器主程序
-echo 部署 claude-remote-server.js...
-wsl sshpass -p "%SERVER_PASSWORD%" scp %LOCAL_PROJECT_PATH%/%LOCAL_DIR%/claude-remote-server.js %SERVER%:%REMOTE_DIR%/
+echo 部署 ai-agent-server.js...
+wsl sshpass -p "%SERVER_PASSWORD%" scp %LOCAL_PROJECT_PATH%/%LOCAL_DIR%/ai-agent-server.js %SERVER%:%REMOTE_DIR%/
 
 REM 部署配置加载工具
 echo 部署 config-loader.js...
@@ -68,7 +68,7 @@ echo 请在服务器上执行以下命令：
 echo   1. SSH登录: wsl sshpass -p "%SERVER_PASSWORD%" ssh %SERVER%
 echo   2. 进入目录: cd %REMOTE_DIR%
 echo   3. 安装依赖: npm install
-echo   4. 启动服务: pm2 start claude-remote-server.js --name %PM2_APP_NAME%
+echo   4. 启动服务: pm2 start ai-agent-server.js --name %PM2_APP_NAME%
 echo   5. 查看日志: pm2 logs %PM2_APP_NAME%
 
 pause
