@@ -92,7 +92,7 @@ function Stop-AllServices {
 
     # 2. 鍏滃簳锛氶€氳繃鍛戒护琛屽尮閰嶆畫鐣?node 杩涚▼锛堟帓闄よ嚜韬級
     $strayProcesses = Get-WmiObject Win32_Process -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -eq "node.exe" -and ($_.CommandLine -like "*ai-agent-server.js*" -or $_.CommandLine -like "*claude-remote-server.js*" -or $_.CommandLine -like "*session-manager.js*") }
+        Where-Object { $_.Name -eq "node.exe" -and ($_.CommandLine -like "*ai-agent-server.js*" -or $_.CommandLine -like "*session-manager.js*") }
     foreach ($proc in $strayProcesses) {
         try {
             Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue
@@ -125,15 +125,7 @@ function Start-Server {
         exit 1
     }
 
-    # 自动检测服务器文件名（支持旧版和新版）
     $scriptPath = Join-Path $SERVER_DIR "ai-agent-server.js"
-    if (-not (Test-Path $scriptPath)) {
-        $scriptPath = Join-Path $SERVER_DIR "claude-remote-server.js"
-    }
-    if (-not (Test-Path $scriptPath)) {
-        Write-Log "ERROR: Server script not found (tried ai-agent-server.js and claude-remote-server.js)" "Red"
-        exit 1
-    }
 
     if ($Env -eq "prod") {
         # 鐢熶骇鐜锛氬悗鍙拌繍琛岋紝鏃ュ織鍐欏叆鏂囦欢
