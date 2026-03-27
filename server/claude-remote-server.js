@@ -206,9 +206,11 @@ function broadcastToSession(sessionId, message, excludeDeviceId = null) {
   if (!session) return;
   const msgStr = JSON.stringify(message);
 
-  if (session.desktop && session.desktop.deviceId !== excludeDeviceId) {
-    if (session.desktop.ws.readyState === 1) session.desktop.ws.send(msgStr);
-  }
+  session.desktops.forEach((desktop) => {
+    if (desktop.deviceId !== excludeDeviceId && desktop.ws.readyState === 1) {
+      desktop.ws.send(msgStr);
+    }
+  });
   if (session.mobile && session.mobile.deviceId !== excludeDeviceId) {
     if (session.mobile.ws.readyState === 1) session.mobile.ws.send(msgStr);
   }
@@ -862,28 +864,18 @@ if (!acquireLock()) {
   process.exit(1);
 }
 
-process.on('SIGINT', () => {
-  console.log('\n[Server] Received SIGINT, shutting down...');
+function shutdown(signal) {
+  console.log(`\n[Server] Received ${signal}, shutting down...`);
   releaseLock();
   process.exit(0);
-});
-
-process.on('SIGTERM', () => {
-  console.log('\n[Server] Received SIGTERM, shutting down...');
-  releaseLock();
-  process.exit(0);
-});
+}
 
 process.on('exit', () => {
   releaseLock();
 });
 
 ['SIGINT', 'SIGTERM', 'SIGHUP'].forEach(signal => {
-  process.on(signal, () => {
-    console.log(`[Server] Received ${signal}, cleaning up...`);
-    releaseLock();
-    process.exit(0);
-  });
+  process.on(signal, () => shutdown(signal));
 });
 
 server.listen(PORT, HOST, () => {

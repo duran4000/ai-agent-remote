@@ -28,6 +28,51 @@ const DEVICE_TYPES = {
   MANAGER: 'manager'
 };
 
+const MOBILE_DISCONNECT_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+
+function getSessionKey(aiAgent, sessionId) {
+  return `${aiAgent}-${sessionId}`;
+}
+
+function quotePathIfNeeded(p) {
+  return p.includes(' ') ? `"${p}"` : p;
+}
+
+function getNodeProcesses() {
+  if (process.platform === 'win32') {
+    const result = execSync("wmic process where \"name='node.exe'\" get processid,commandline /format:csv", { encoding: 'utf8' });
+    return result.split('\n').slice(1).filter(line => line.trim());
+  }
+  // Linux/Mac
+  const result = execSync("ps aux | grep 'node' | grep -v grep", { encoding: 'utf8' });
+  return result.trim().split('\n').filter(line => line);
+}
+
+function parseProcessLine(line) {
+  const isWindows = process.platform === 'win32';
+  let pid, commandLine;
+
+  if (isWindows) {
+    const lastCommaIndex = line.lastIndexOf(',');
+    if (lastCommaIndex === -1) return null;
+    pid = line.substring(lastCommaIndex + 1).trim();
+    commandLine = line.replace(/\\/g, '/');
+  } else {
+    const parts = line.trim().split(/\s+/);
+    pid = parts[1];
+    commandLine = line;
+  }
+
+  if (!pid || isNaN(pid)) return null;
+  return { pid, commandLine };
+}
+
+function extractArgValue(line, argName) {
+  let match = line.match(new RegExp(`--${argName}[=\\s]+([^"\\s]+)`));
+  if (!match) match = line.match(new RegExp(`--${argName}[=\\s]+"([^"]+)"`));
+  return match ? match[1] : null;
+}
+
 function acquireLock() {
   if (fs.existsSync(LOCK_FILE)) {
     try {
@@ -53,11 +98,14 @@ function acquireLock() {
   }
 
   try {
+    // Use 'wx' flag for atomic creation - fails if file already exists
+    const fd = fs.openSync(LOCK_FILE, 'wx');
     const lockData = {
       pid: process.pid,
       startTime: new Date().toISOString()
     };
-    fs.writeFileSync(LOCK_FILE, JSON.stringify(lockData, null, 2));
+    fs.writeSync(fd, JSON.stringify(lockData, null, 2));
+    fs.closeSync(fd);
     log(`Lock file created: ${LOCK_FILE}`);
     return true;
   } catch (error) {
@@ -238,9 +286,9 @@ class SessionManager {
   }
 
   handleMobileConnect(sessionId, deviceId, clientWorkDir, aiAgent = 'claude') {
-    const sessionKey = `${aiAgent}-${sessionId}`;
+    const sessionKey = getSessionKey(aiAgent, sessionId);
     const existingSession = this.sessions.get(sessionKey);
-    
+
     if (existingSession) {
       // 检查wrapper是否真的还在运行
       if (existingSession.wrapper && !existingSession.wrapper.killed && !existingSession.wrapperExited) {
@@ -290,7 +338,7 @@ class SessionManager {
   }
 
   handleMobileDisconnect(sessionId, deviceId, aiAgent = 'claude') {
-    const sessionKey = `${aiAgent}-${sessionId}`;
+    const sessionKey = getSessionKey(aiAgent, sessionId);
     const session = this.sessions.get(sessionKey);
     if (session) {
       // 不立即关闭 wrapper，只是记录断开
@@ -311,13 +359,13 @@ class SessionManager {
           }
           this.sessions.delete(sessionKey);
         }
-      }, 5 * 60 * 1000); // 5分钟
+      }, MOBILE_DISCONNECT_TIMEOUT);
     }
   }
 
   handleDesktopDisconnect(sessionId, deviceId, aiAgent) {
     // 根据aiAgent和sessionId查找对应的session
-    const sessionKey = `${aiAgent}-${sessionId}`;
+    const sessionKey = getSessionKey(aiAgent, sessionId);
     const session = this.sessions.get(sessionKey);
 
     if (session) {
@@ -379,92 +427,21 @@ class SessionManager {
   }
 
   checkExistingWrapper(sessionId, aiAgent = 'claude') {
-    const isWindows = process.platform === 'win32';
     const normalizedSessionId = sessionId.replace(/\\/g, '/');
-    
+
     try {
-      if (isWindows) {
-        const result = execSync('wmic process where "name=\'node.exe\'" get processid,commandline /format:csv', { encoding: 'utf8' });
-        const lines = result.split('\n').slice(1);
-        
-        for (const line of lines) {
-          if (line.includes('claude-pty-wrapper')) {
-            // 标准化命令行中的session参数，将反斜杠替换为正斜杠
-            const normalizedCommandLine = line.replace(/\\/g, '/');
-            if (normalizedCommandLine.includes(normalizedSessionId)) {
-              // CSV格式: NodeName,"CommandLine",ProcessId
-              // PID在最后一个字段，需要正确解析CSV
-              const lastCommaIndex = line.lastIndexOf(',');
-              if (lastCommaIndex !== -1) {
-                const pid = line.substring(lastCommaIndex + 1).trim();
-                
-                // 提取claude-path参数 - 改进正则表达式，支持多种格式
-                let claudePath = null;
-                let claudePathMatch = line.match(/--claude-path[=\s]+([^\s"]+)/);
-                if (!claudePathMatch) {
-                  claudePathMatch = line.match(/--claude-path[=\s]+"([^"]+)"/);
-                }
-                if (claudePathMatch) {
-                  claudePath = claudePathMatch[1];
-                }
-                
-                // 提取ai-model参数 - 改进正则表达式，支持多种格式
-                let existingAiAgent = null;
-                let aiAgentMatch = line.match(/--ai-model[=\s]+(\w+)/);
-                if (!aiAgentMatch) {
-                  aiAgentMatch = line.match(/--ai-model[=\s]+"(\w+)"/);
-                }
-                if (aiAgentMatch) {
-                  existingAiAgent = aiAgentMatch[1];
-                }
-                
-                // 只返回匹配aiAgent的wrapper，不匹配的wrapper不返回
-                if (existingAiAgent && existingAiAgent !== aiAgent) {
-                  // aiAgent不匹配，跳过这个wrapper
-                } else if (pid && !isNaN(pid)) {
-                  return { pid, claudePath, aiAgent: existingAiAgent, mismatch: false };
-                }
-              }
-            }
-          }
-        }
-      } else {
-        const result = execSync(`ps aux | grep "claude-pty-wrapper" | grep "${sessionId}" | grep -v grep`, { encoding: 'utf8' });
-        const lines = result.trim().split('\n').filter(line => line);
-        
-        if (lines.length > 0) {
-          const line = lines[0];
-          const parts = line.trim().split(/\s+/);
-          const pid = parts[1];
-          
-          // 提取claude-path参数
-          let claudePath = null;
-          let claudePathMatch = line.match(/--claude-path\s+([^\s"]+)/);
-          if (!claudePathMatch) {
-            claudePathMatch = line.match(/--claude-path\s+"([^"]+)"/);
-          }
-          if (claudePathMatch) {
-            claudePath = claudePathMatch[1];
-          }
-          
-          // 提取ai-model参数
-          let existingAiAgent = null;
-          let aiAgentMatch = line.match(/--ai-model\s+(\w+)/);
-          if (!aiAgentMatch) {
-            aiAgentMatch = line.match(/--ai-model\s+"(\w+)"/);
-          }
-          if (aiAgentMatch) {
-            existingAiAgent = aiAgentMatch[1];
-          }
-          
-          // 只返回匹配aiAgent的wrapper，不匹配的wrapper不返回
-          if (existingAiAgent && existingAiAgent !== aiAgent) {
-            // aiAgent不匹配，不返回这个wrapper
-            return null;
-          }
-          
-          return { pid, claudePath, aiAgent: existingAiAgent, mismatch: false };
-        }
+      const lines = getNodeProcesses();
+
+      for (const line of lines) {
+        const parsed = parseProcessLine(line);
+        if (!parsed) continue;
+        if (!line.includes('claude-pty-wrapper') || !parsed.commandLine.includes(normalizedSessionId)) continue;
+
+        const claudePath = extractArgValue(line, 'claude-path');
+        const existingAiAgent = extractArgValue(line, 'ai-model');
+
+        if (existingAiAgent && existingAiAgent !== aiAgent) continue;
+        return { pid: parsed.pid, claudePath, aiAgent: existingAiAgent, mismatch: false };
       }
     } catch (error) {
       log(`[${sessionId}] Check existing wrapper error: ${error.message}`);
@@ -495,43 +472,23 @@ class SessionManager {
   }
 
   cleanupExistingWrapper(sessionId) {
-    const isWindows = process.platform === 'win32';
-    
     try {
-      if (isWindows) {
-        // Windows: 杀死包含claude-pty-wrapper和sessionId的node进程
-        const result = execSync('wmic process where "name=\'node.exe\'" get processid,commandline /format:csv', { encoding: 'utf8' });
-        const lines = result.split('\n').slice(1);
-        
-        for (const line of lines) {
-          if (line.includes('claude-pty-wrapper') && line.includes(sessionId)) {
-            // CSV格式: NodeName,"CommandLine",ProcessId
-            // PID在最后一个字段
-            const parts = line.split(',');
-            const pid = parts[parts.length - 1].trim();
-            
-            if (pid && !isNaN(pid)) {
-              try {
-                execSync(`taskkill /F /PID ${pid}`, { encoding: 'utf8' });
-                log(`[${sessionId}] Killed existing wrapper process: PID ${pid}`);
-              } catch (killError) {
-                log(`[${sessionId}] Failed to kill process ${pid}: ${killError.message}`);
-              }
-            }
+      const lines = getNodeProcesses();
+
+      for (const line of lines) {
+        if (!line.includes('claude-pty-wrapper') || !line.includes(sessionId)) continue;
+        const parsed = parseProcessLine(line);
+        if (!parsed) continue;
+
+        try {
+          if (process.platform === 'win32') {
+            execSync(`taskkill /F /PID ${parsed.pid}`, { encoding: 'utf8' });
+          } else {
+            execSync(`kill -9 ${parsed.pid}`, { encoding: 'utf8' });
           }
-        }
-      } else {
-        // Linux/Mac: 杀死包含sessionId的node进程
-        const result = execSync(`ps aux | grep "claude-pty-wrapper" | grep "${sessionId}" | grep -v grep | awk '{print $2}'`, { encoding: 'utf8' });
-        const pids = result.trim().split('\n').filter(pid => pid);
-        
-        for (const pid of pids) {
-          try {
-            execSync(`kill -9 ${pid}`, { encoding: 'utf8' });
-            log(`[${sessionId}] Killed existing wrapper process: PID ${pid}`);
-          } catch (killError) {
-            log(`[${sessionId}] Failed to kill process ${pid}: ${killError.message}`);
-          }
+          log(`[${sessionId}] Killed existing wrapper process: PID ${parsed.pid}`);
+        } catch (killError) {
+          log(`[${sessionId}] Failed to kill process ${parsed.pid}: ${killError.message}`);
         }
       }
     } catch (error) {
@@ -541,35 +498,23 @@ class SessionManager {
 
   cleanupPtyProcesses(sessionId, aiAgent = 'claude') {
     const normalizedSessionId = sessionId.replace(/\\/g, '/').toLowerCase();
-    const isWindows = process.platform === 'win32';
 
     try {
-      if (isWindows) {
-        // Windows: 使用 WMIC 查找进程树
-        // 首先查找 wrapper 进程（node.exe 运行 claude-pty-wrapper.js）
-        const wrapperResult = execSync('wmic process where "name=\'node.exe\'" get processid,commandline /format:csv', { encoding: 'utf8' });
-        const lines = wrapperResult.split('\n').slice(1);
-
+      if (process.platform === 'win32') {
+        const lines = getNodeProcesses();
         for (const line of lines) {
-          if (line.includes('claude-pty-wrapper') && line.includes(normalizedSessionId)) {
-            const lastCommaIndex = line.lastIndexOf(',');
-            if (lastCommaIndex !== -1) {
-              const wrapperPid = line.substring(lastCommaIndex + 1).trim();
+          if (!line.includes('claude-pty-wrapper') || !line.includes(normalizedSessionId)) continue;
+          const parsed = parseProcessLine(line);
+          if (!parsed) continue;
 
-              if (wrapperPid && !isNaN(wrapperPid)) {
-                // 使用 taskkill /F /T 杀死 wrapper 进程及其所有子进程
-                try {
-                  execSync(`taskkill /F /T /PID ${wrapperPid}`, { encoding: 'utf8', timeout: 10000 });
-                  log(`[${normalizedSessionId}] Killed wrapper process tree: PID ${wrapperPid}`);
-                } catch (killError) {
-                  log(`[${normalizedSessionId}] Failed to kill wrapper tree ${wrapperPid}: ${killError.message}`);
-                }
-              }
-            }
+          try {
+            execSync(`taskkill /F /T /PID ${parsed.pid}`, { encoding: 'utf8', timeout: 10000 });
+            log(`[${normalizedSessionId}] Killed wrapper process tree: PID ${parsed.pid}`);
+          } catch (killError) {
+            log(`[${normalizedSessionId}] Failed to kill wrapper tree ${parsed.pid}: ${killError.message}`);
           }
         }
       } else {
-        // Linux/Mac: 使用 pkill 杀死进程组
         try {
           execSync(`pkill -f "claude-pty-wrapper.*${normalizedSessionId}"`, { encoding: 'utf8' });
           log(`[${normalizedSessionId}] Killed wrapper processes`);
@@ -639,7 +584,7 @@ class SessionManager {
       // Windows: 直接 spawn cmd.exe /c start，避免 shell:true 创建多余的 cmd 窗口
       // cmd.exe 由 windowsHide:true 隐藏，start 创建的唯一窗口可见
       const windowTitle = `"${aiAgent.toUpperCase()}"`;
-      const quotedClaudePath = claudePath.includes(' ') ? `"${claudePath}"` : claudePath;
+      const quotedClaudePath = quotePathIfNeeded(claudePath);
 
       spawnArgs = [
         '/c',
@@ -657,7 +602,7 @@ class SessionManager {
       ];
 
       if (fallbackPath) {
-        const quotedFallbackPath = fallbackPath.includes(' ') ? `"${fallbackPath}"` : fallbackPath;
+        const quotedFallbackPath = quotePathIfNeeded(fallbackPath);
         spawnArgs.push('--fallback-path', quotedFallbackPath);
       }
 
@@ -836,30 +781,19 @@ if (!acquireLock()) {
   process.exit(1);
 }
 
-process.on('SIGINT', () => {
-  log('Received SIGINT, shutting down...');
+function shutdown(signal) {
+  log(`Received ${signal}, shutting down...`);
   manager.stop();
   releaseLock();
   process.exit(0);
-});
-
-process.on('SIGTERM', () => {
-  log('Received SIGTERM, shutting down...');
-  manager.stop();
-  releaseLock();
-  process.exit(0);
-});
+}
 
 process.on('exit', () => {
   releaseLock();
 });
 
 ['SIGINT', 'SIGTERM', 'SIGHUP'].forEach(signal => {
-  process.on(signal, () => {
-    log(`Received ${signal}, cleaning up...`);
-    releaseLock();
-    process.exit(0);
-  });
+  process.on(signal, () => shutdown(signal));
 });
 
 manager.start();

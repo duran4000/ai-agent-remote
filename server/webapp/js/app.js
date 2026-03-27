@@ -1494,7 +1494,7 @@ class App {
       const label = document.createElement('span');
       label.className = 'tab-label';
       const agentName = this.getAIAgentName(tab.aiAgent);
-      label.textContent = tab.name || agentName;
+      label.textContent = tab.name || agentName || '-';
 
       const lockBtn = document.createElement('span');
       lockBtn.className = `tab-lock ${isLocked ? 'locked' : 'unlocked'}`;
@@ -1592,27 +1592,35 @@ class App {
 
       const tabsList = this.elements.tabsList;
       const children = Array.from(tabsList.children);
+      const tabButtons = children.filter(c => c.classList.contains('tab-btn'));
 
-      // 遍历所有子元素（包括占位符和其他标签）
-      for (let i = 0; i < children.length; i++) {
-        const child = children[i];
-        if (child === placeholder) continue;
-        if (!child.classList.contains('tab-btn')) continue;
-
-        const rect = child.getBoundingClientRect();
+      // 找到鼠标所在位置的目标索引
+      // 从左到右扫描，找到第一个 midpoint > clientX 的标签，该标签之前的位置就是目标
+      let targetIdx = 0;
+      for (let i = 0; i < tabButtons.length; i++) {
+        const rect = tabButtons[i].getBoundingClientRect();
         const midX = rect.left + rect.width / 2;
-        const placeholderIdx = children.indexOf(placeholder);
-        const childIdx = i;
-
-        if (clientX < midX && placeholderIdx > childIdx) {
-          // 移动到左边，且占位符在右边
-          tabsList.insertBefore(placeholder, child);
-          break;
-        } else if (clientX > midX && placeholderIdx < childIdx) {
-          // 移动到右边，且占位符在左边
-          tabsList.insertBefore(placeholder, child.nextSibling);
+        if (clientX < midX) {
+          targetIdx = i;
           break;
         }
+        targetIdx = i + 1;
+      }
+
+      // 如果目标位置是占位符当前位置，不操作
+      const currentPlaceholderIdx = children.indexOf(placeholder);
+      if (targetIdx === currentPlaceholderIdx) return;
+
+      // 移动占位符到目标位置
+      const targetChild = children[targetIdx];
+      if (targetChild === placeholder) return;
+
+      if (targetIdx < currentPlaceholderIdx) {
+        // 向左移动：插到目标元素之前
+        tabsList.insertBefore(placeholder, targetChild);
+      } else {
+        // 向右移动：插到目标元素之后（下一个兄弟元素之前）
+        tabsList.insertBefore(placeholder, targetChild.nextSibling);
       }
     };
 
@@ -1625,8 +1633,10 @@ class App {
       // 计算新顺序
       const tabsList = this.elements.tabsList;
       const newOrder = [];
+      let placeholderIdx = -1;
       tabsList.querySelectorAll('.tab-btn, .tab-placeholder').forEach(el => {
         if (el.classList.contains('tab-placeholder')) {
+          placeholderIdx = newOrder.length;
           newOrder.push(tabId);
         } else if (el.dataset.tabId) {
           newOrder.push(el.dataset.tabId);
@@ -1634,7 +1644,12 @@ class App {
       });
 
       // 重新排序 tabs 数组
-      this.tabs.sort((a, b) => newOrder.indexOf(a.id) - newOrder.indexOf(b.id));
+      // 拖拽的 tab 用 placeholderIdx（目标位置），其他 tab 用 indexOf（首个出现位置）
+      this.tabs.sort((a, b) => {
+        const aIdx = a.id === tabId ? placeholderIdx : newOrder.indexOf(a.id);
+        const bIdx = b.id === tabId ? placeholderIdx : newOrder.indexOf(b.id);
+        return aIdx - bIdx;
+      });
       this.saveTabs();
 
       clearDragState();

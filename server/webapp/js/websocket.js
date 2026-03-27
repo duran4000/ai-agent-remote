@@ -149,24 +149,18 @@ export class WebSocketManager {
 
   _handlePong() {
     if (this._pingTime) {
-      const latency = Date.now() - this._pingTime;
+      const latency = Math.round(Date.now() - this._pingTime);
       this._pingTime = null;
 
-      // 记录延迟历史
+      // 记录延迟历史（仅用于调试）
       this._latencyHistory.push(latency);
       if (this._latencyHistory.length > this._maxLatencyHistory) {
         this._latencyHistory.shift();
       }
 
-      // 计算平均延迟
-      const avgLatency = Math.round(
-        this._latencyHistory.reduce((a, b) => a + b, 0) / this._latencyHistory.length
-      );
-
-      this.latency = avgLatency;
-
-      // 每次都触发延迟更新事件
-      this.emit('latency', { latency: avgLatency, history: [...this._latencyHistory] });
+      // 直接显示最新值，不做平滑
+      this.latency = latency;
+      this.emit('latency', { latency, history: [...this._latencyHistory] });
     }
   }
 

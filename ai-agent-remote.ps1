@@ -215,6 +215,17 @@ function Show-Status {
     }
 }
 
+function Start-Services {
+    Stop-AllServices
+    Start-Sleep -Seconds 1
+    $serverPid = Start-Server
+    Start-Sleep -Seconds 2
+    $managerPid = Start-SessionManager
+    Save-Pids -ServerPid $serverPid -ManagerPid $managerPid
+    Start-Sleep -Seconds 2
+    Show-Status
+}
+
 # 主逻辑
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
@@ -239,14 +250,7 @@ switch ($Action) {
         Show-Status
     }
     "restart" {
-        Stop-AllServices
-        Start-Sleep -Seconds 1
-        $serverPid = Start-Server
-        Start-Sleep -Seconds 2
-        $managerPid = Start-SessionManager
-        Save-Pids -ServerPid $serverPid -ManagerPid $managerPid
-        Start-Sleep -Seconds 2
-        Show-Status
+        Start-Services
     }
 }
 

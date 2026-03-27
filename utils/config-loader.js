@@ -13,14 +13,14 @@ export function loadConfig(forceReload = false) {
   }
 
   const configPath = path.join(__dirname, '..', 'config.json');
-  
+
   try {
     const configData = fs.readFileSync(configPath, 'utf-8');
     configCache = JSON.parse(configData);
     return configCache;
   } catch (error) {
     console.error('Failed to load config:', error.message);
-    
+
     return {
       server: {
         host: '127.0.0.1',
@@ -41,50 +41,27 @@ export function loadConfig(forceReload = false) {
   }
 }
 
-export function getServerUrl() {
-  const config = loadConfig();
-  return config.server.url;
+function getConfigValue(pathParts, forceReload = false) {
+  const config = loadConfig(forceReload);
+  let value = config;
+  for (const key of pathParts) {
+    value = value?.[key];
+  }
+  return value;
 }
 
-export function getServerToken() {
-  const config = loadConfig();
-  return config.server.token;
-}
-
-export function getServerAuthPassword() {
-  const config = loadConfig();
-  return config.server.authPassword || '';
-}
-
-export function getServerHost() {
-  const config = loadConfig();
-  return config.server.host;
-}
-
-export function getServerPort() {
-  const config = loadConfig();
-  return config.server.port;
-}
-
-export function getWrapperDefaults() {
-  const config = loadConfig();
-  return config.wrapper;
-}
-
-export function getSessionConfig() {
-  const config = loadConfig();
-  return config.session;
-}
-
-export function getSessionDefaults() {
-  const config = loadConfig();
-  return config.sessions?.defaults || {};
-}
-
-export function getSessionOverrides() {
-  const config = loadConfig();
-  return config.sessions?.overrides || {};
-}
+export function getServerUrl() { return getConfigValue(['server', 'url']); }
+export function getServerToken() { return getConfigValue(['server', 'token']); }
+export function getServerAuthPassword() { return getConfigValue(['server', 'authPassword']) || ''; }
+export function getServerHost() { return getConfigValue(['server', 'host']); }
+export function getServerPort() { return getConfigValue(['server', 'port']); }
+export function getWrapperDefaults() { return getConfigValue(['wrapper']); }
+export function getSessionConfig() { return getConfigValue(['session']); }
+export function getSessionDefaults() { return getConfigValue(['sessions', 'defaults']) || {}; }
+export function getSessionOverrides() { return getConfigValue(['sessions', 'overrides']) || {}; }
+export function getConnectionConfig() { return getConfigValue(['connection']) || { defaultMode: 'direct', fallbackToRelay: true }; }
+export function getServerHttpsPort() { return getConfigValue(['server', 'httpsPort']) || 65437; }
+export function getAIAgents() { return getConfigValue(['aiAgents'], true) || {}; }
 
 export function getSessionClaudePath(sessionId) {
   const overrides = getSessionOverrides();
@@ -125,27 +102,12 @@ export function getAIModelPath(aiModel, sessionId, forceReload = false) {
   };
 }
 
-export function getAIAgents() {
-  const config = loadConfig(true); // 强制重新加载，确保获取最新配置
-  return config.aiAgents || {};
-}
-
 export function getAIAgentName(aiAgent) {
   const aiAgents = getAIAgents();
   if (aiAgent && aiAgents[aiAgent]) {
     return aiAgents[aiAgent].name || aiAgent;
   }
   return aiAgent || 'Unknown';
-}
-
-export function getConnectionConfig() {
-  const config = loadConfig();
-  return config.connection || { defaultMode: 'direct', fallbackToRelay: true };
-}
-
-export function getServerHttpsPort() {
-  const config = loadConfig();
-  return config.server.httpsPort || 65437;
 }
 
 export function saveConfig(newConfig) {
