@@ -142,17 +142,25 @@ function Start-Server {
 }
 
 function Wait-ForServerHealthy {
-    param([int]$TimeoutSeconds = 30)
+    param([int]$TimeoutSeconds = 60)
     $waited = 0
     $interval = 500
 
-    Write-Log "Waiting for server to be ready..." "Yellow"
+    Write-Log "Waiting for server to be ready (timeout: ${TimeoutSeconds}s)..." "Yellow"
 
     while ($waited -lt ($TimeoutSeconds * 1000)) {
+        # 优先用 NetTCPConnection 检查端口
         $conn = Get-NetTCPConnection -LocalPort $PORT -State Listen -ErrorAction SilentlyContinue
         if ($conn) {
             Write-Log "Server is ready (port $PORT listening)" "Green"
             return $true
+        }
+
+        # 备用：检查 node 进程是否在运行
+        $nodeProc = Get-Process -Name "node" -ErrorAction SilentlyContinue |
+            Where-Object { $_.CommandLine -like "*ai-agent-server.js*" }
+        if ($nodeProc) {
+            # 进程在运行但端口还未监听，继续等待
         }
 
         Start-Sleep -Milliseconds $interval
