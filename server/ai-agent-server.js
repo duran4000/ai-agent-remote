@@ -14,14 +14,29 @@ const __dirname = dirname(__filename);
 const LOCK_FILE = join(__dirname, 'server.lock');
 const LOG_FILE = join(process.env.TEMP || '/tmp', 'ai-agent-server.log');
 
-function logToFile(message) {
-  const timestamp = new Date().toISOString();
-  const logLine = `[${timestamp}] ${message}\n`;
+// Buffered async logging - prevents high-frequency output from blocking the event loop
+const logBuffer = [];
+const LOG_FLUSH_INTERVAL = 500; // ms
+const LOG_BUFFER_MAX = 1000; // drop logs if buffer is too full
+
+function flushLogBuffer() {
+  if (logBuffer.length === 0) return;
+  const chunk = logBuffer.splice(0, logBuffer.length);
   try {
-    appendFileSync(LOG_FILE, logLine);
+    appendFileSync(LOG_FILE, chunk.join(''));
   } catch (error) {
-    console.error('Failed to write to log file:', error.message);
+    // Silently ignore - don't let logging failures crash the server
   }
+}
+
+setInterval(flushLogBuffer, LOG_FLUSH_INTERVAL);
+
+function logToFile(message) {
+  if (logBuffer.length >= LOG_BUFFER_MAX) {
+    logBuffer.splice(0, logBuffer.length - LOG_BUFFER_MAX + 100);
+  }
+  const timestamp = new Date().toISOString();
+  logBuffer.push(`[${timestamp}] ${message}\n`);
 }
 
 const originalConsoleLog = console.log;
@@ -296,7 +311,10 @@ function handleWebSocket(ws, req) {
       const msg = JSON.parse(data.toString());
       const { type, sessionId: msgSid, data: msgData } = msg;
 
-      console.log(`[WS] Received message type: ${type}, from: ${deviceId || 'not authed'}, deviceType: ${deviceType}`);
+      // Skip per-message logging for high-frequency output to avoid event loop blocking
+      if (type !== 'output') {
+        console.log(`[WS] Received message type: ${type}, from: ${deviceId || 'not authed'}, deviceType: ${deviceType}`);
+      }
 
       if (!isAuthenticated && type !== 'control') {
         send({ type: 'status', data: { status: 'disconnected', error: 'Not authenticated' } });
@@ -500,15 +518,22 @@ function handleWebSocket(ws, req) {
       }
 
       if (type === 'output' && deviceType === 'desktop') {
-        addToHistory(sessionId, msg);
+        // output messages are not added to history (no replay value, saves memory)
         const session = getSession(sessionId);
-        console.log(`[WS] OUTPUT from desktop, mobile ready: ${session?.mobile?.ws?.readyState}`);
         if (session?.mobile?.ws?.readyState === 1) {
-          const sent = session.mobile.ws.send(JSON.stringify(msg));
-          console.log(`[WS] Sent to mobile, result:`, sent);
-        } else {
-          console.log(`[WS] Mobile not ready, state:`, session?.mobile?.ws?.readyState);
+          session.mobile.ws.send(JSON.stringify(msg));
+          // Throttled logging: summary every 10s instead of per-message
+          if (!session._outputLogTimer) {
+            session._outputLogCount = 0;
+            session._outputLogTimer = setTimeout(() => {
+              console.log(`[WS] OUTPUT: forwarded ${session._outputLogCount} msgs to mobile (${sessionId})`);
+              session._outputLogTimer = null;
+              session._outputLogCount = 0;
+            }, 10000);
+          }
+          session._outputLogCount++;
         }
+        // If mobile is not connected, skip entirely - no logging, no processing
       }
 
       if (type === 'resize') {
