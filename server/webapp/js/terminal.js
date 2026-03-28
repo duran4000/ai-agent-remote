@@ -60,6 +60,10 @@ export class Terminal {
     
     this.term.open(container);
 
+    // Inertia scroll for touch devices - xterm.js handles touchmove via scrollTop,
+    // so we intercept touch events before xterm and add momentum after touchend
+    this._setupInertiaScroll();
+
     // 使用 xterm 的 onScroll API 监听滚动
     this.term.onScroll(() => {
       const buffer = this.term._core?.buffer;
@@ -131,6 +135,71 @@ export class Terminal {
       this.lastDevicePixelRatio = window.devicePixelRatio;
       setTimeout(() => this.fit(), 50);
     }
+  }
+
+  _setupInertiaScroll() {
+    const viewport = this.container.querySelector('.xterm-viewport');
+    if (!viewport) return;
+
+    let lastTouchY = 0;
+    let lastTouchTime = 0;
+    let velocity = 0;
+    let animFrameId = null;
+    let isTouching = false;
+    const friction = 0.95;
+    const minVelocity = 0.5;
+
+    // 使用 capture 阶段，确保在 xterm.js 之前捕获触摸事件
+    viewport.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        isTouching = true;
+        lastTouchY = e.touches[0].clientY;
+        lastTouchTime = Date.now();
+        velocity = 0;
+        if (animFrameId) {
+          cancelAnimationFrame(animFrameId);
+          animFrameId = null;
+        }
+      }
+    }, { passive: true, capture: true });
+
+    viewport.addEventListener('touchmove', (e) => {
+      if (e.touches.length !== 1 || !isTouching) return;
+      const y = e.touches[0].clientY;
+      const now = Date.now();
+      const dy = y - lastTouchY;
+      const dt = now - lastTouchTime;
+      if (dt > 0) {
+        velocity = velocity * 0.7 + (dy / dt) * 1000 * 0.3;
+      }
+      lastTouchY = y;
+      lastTouchTime = now;
+    }, { passive: true, capture: true });
+
+    viewport.addEventListener('touchend', () => {
+      isTouching = false;
+      if (Math.abs(velocity) < minVelocity) return;
+
+      const animate = () => {
+        velocity *= friction;
+        if (Math.abs(velocity) < minVelocity) {
+          animFrameId = null;
+          return;
+        }
+        const clampedVelocity = Math.sign(velocity) * Math.min(Math.abs(velocity), 4000);
+        viewport.scrollTop += clampedVelocity / 60;
+        animFrameId = requestAnimationFrame(animate);
+      };
+      animFrameId = requestAnimationFrame(animate);
+    }, { passive: true, capture: true });
+
+    // 用户在惯性动画期间重新触摸时立即停止
+    viewport.addEventListener('touchstart', () => {
+      if (animFrameId) {
+        cancelAnimationFrame(animFrameId);
+        animFrameId = null;
+      }
+    }, { passive: true, capture: true });
   }
 
   fixHelperTextareaPosition(container) {

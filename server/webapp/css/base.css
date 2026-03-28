@@ -123,6 +123,7 @@ body {
 
 #terminal .xterm-viewport {
   background-color: var(--terminal-bg) !important;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* 终端滚动条美化 */
