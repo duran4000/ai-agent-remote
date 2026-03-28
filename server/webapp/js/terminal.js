@@ -146,16 +146,18 @@ export class Terminal {
     let velocity = 0;
     let animFrameId = null;
     let isTouching = false;
-    const friction = 0.95;
-    const minVelocity = 0.5;
+    let lastFrameTime = 0;
+    let accumScroll = 0;
+    const DECEL_SLOW = 0.001; // 前半段：丝滑减速
+    const DECEL_FAST = 0.02; // 后半段：快速刹车
 
-    // 使用 capture 阶段，确保在 xterm.js 之前捕获触摸事件
     viewport.addEventListener('touchstart', (e) => {
       if (e.touches.length === 1) {
         isTouching = true;
         lastTouchY = e.touches[0].clientY;
         lastTouchTime = Date.now();
         velocity = 0;
+        accumScroll = 0;
         if (animFrameId) {
           cancelAnimationFrame(animFrameId);
           animFrameId = null;
@@ -170,7 +172,7 @@ export class Terminal {
       const dy = y - lastTouchY;
       const dt = now - lastTouchTime;
       if (dt > 0) {
-        velocity = velocity * 0.7 + (dy / dt) * 1000 * 0.3;
+        velocity = velocity * 0.4 + (dy / dt) * 1000 * 0.6;
       }
       lastTouchY = y;
       lastTouchTime = now;
@@ -178,22 +180,39 @@ export class Terminal {
 
     viewport.addEventListener('touchend', () => {
       isTouching = false;
-      if (Math.abs(velocity) < minVelocity) return;
+      if (Math.abs(velocity) < 60) return;
 
-      const animate = () => {
-        velocity *= friction;
-        if (Math.abs(velocity) < minVelocity) {
+      const startVelocity = velocity;
+      lastFrameTime = performance.now();
+      accumScroll = 0;
+
+      const animate = (now) => {
+        const dt = now - lastFrameTime;
+        lastFrameTime = now;
+
+        // 两段式衰减：前半段丝滑，后半段果断刹车
+        const decel = Math.abs(velocity) < 800 ? DECEL_FAST : DECEL_SLOW;
+        const decay = Math.exp(-decel * dt);
+        velocity *= decay;
+
+        if (Math.abs(velocity) < 200) {
           animFrameId = null;
           return;
         }
-        const clampedVelocity = Math.sign(velocity) * Math.min(Math.abs(velocity), 4000);
-        viewport.scrollTop += clampedVelocity / 60;
+
+        // 累积浮点滚动量，只在实际变化时设置 scrollTop，避免整数取整抖动
+        accumScroll += velocity * dt / 1000;
+        const delta = Math.round(accumScroll);
+        if (delta !== 0) {
+          viewport.scrollTop -= delta;
+          accumScroll -= delta;
+        }
+
         animFrameId = requestAnimationFrame(animate);
       };
       animFrameId = requestAnimationFrame(animate);
     }, { passive: true, capture: true });
 
-    // 用户在惯性动画期间重新触摸时立即停止
     viewport.addEventListener('touchstart', () => {
       if (animFrameId) {
         cancelAnimationFrame(animFrameId);
