@@ -314,7 +314,9 @@ class SessionManager {
       }
     }
 
-    const workDir = (clientWorkDir || sessionId).replace(/\\/g, '/').toLowerCase();
+    const workDir = !clientWorkDir
+      ? process.cwd()
+      : clientWorkDir.replace(/\\/g, '/').toLowerCase();
     
     loadConfig(true);
     const pathConfig = getAIModelPath(aiAgent, sessionId.toLowerCase(), true);

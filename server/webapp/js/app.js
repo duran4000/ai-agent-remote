@@ -713,8 +713,8 @@ class App {
   async connect() {
     const serverUrl = this.elements.serverUrl.value.trim() || window.location.origin.replace(/^http/, 'ws');
     const token = this.elements.authToken.value.trim();
-    const workDir = this.elements.workDir.value.trim().replace(/\\/g, '/').toLowerCase();
     const aiAgent = this.elements.aiAgent.value;
+    const workDir = this.elements.workDir.value.trim().replace(/\\/g, '/').toLowerCase();
     const createNewTab = this.elements.newTabCheckbox.checked;
 
     if (!token) {
@@ -723,8 +723,11 @@ class App {
     }
 
     if (!workDir) {
-      alert('请输入工作目录');
-      return;
+      // OpenClaw uses its own workspace, skip directory validation
+      if (aiAgent !== 'openclaw') {
+        alert('请输入工作目录');
+        return;
+      }
     }
 
     try {
@@ -734,9 +737,9 @@ class App {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ directory: workDir })
       });
-      
+
       const result = await response.json();
-      
+
       if (!result.success) {
         alert(`目录验证失败: ${result.error || '未知错误'}`);
         return;
@@ -821,14 +824,16 @@ class App {
         }
       });
 
-      const message = await wsManager.connect(serverUrl, token, workDir, aiAgent);
-      
+      // OpenClaw uses its own workspace, submit empty workDir
+      const submitWorkDir = aiAgent === 'openclaw' ? '' : workDir;
+      const message = await wsManager.connect(serverUrl, token, submitWorkDir, aiAgent);
+
       this.tabConnections.set(this.currentTabId, {
         wsManager,
         isConnected: true,
         serverUrl,
         token,
-        workDir: workDir.toLowerCase(),
+        workDir: submitWorkDir,
         aiAgent
       });
       
