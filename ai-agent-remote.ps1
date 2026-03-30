@@ -8,7 +8,7 @@ param(
 
     [Parameter(Position=1)]
     [ValidateSet("dev", "prod")]
-    [string]$Env = "dev"
+    [string]$Env = "prod"
 )
 
 $ErrorActionPreference = "Stop"
