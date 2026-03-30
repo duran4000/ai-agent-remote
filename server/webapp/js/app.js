@@ -1774,11 +1774,14 @@ class App {
       this.elements.authToken.value = currentTab.token || '';
       this.elements.workDir.value = currentTab.workDir || '';
       this.elements.aiAgent.value = currentTab.aiAgent || 'claude';
+      this.selectAIAgent(currentTab.aiAgent || 'claude');
       this.updateSessionInfo(currentTab.aiAgent, currentTab.workDir);
     }
   }
 
   addTab() {
+    this.elements.newTabCheckbox.checked = true;
+    this.loadSettingsToForm();
     this.showSettings();
   }
 
@@ -2000,7 +2003,9 @@ class App {
     this.elements.serverUrl.value = this.settings.serverUrl || '';
     this.elements.authToken.value = this.settings.token || '';
     this.elements.workDir.value = this.settings.workDir || '';
-    this.elements.aiAgent.value = this.settings.aiAgent || 'claude';
+    const aiAgentKey = this.settings.aiAgent || 'claude';
+    this.elements.aiAgent.value = aiAgentKey;
+    this.selectAIAgent(aiAgentKey);
 
     // Load overlay click mode
     const overlayMode = this.settings.overlayClickMode || 'dblclick';
