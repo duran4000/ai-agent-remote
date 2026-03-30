@@ -817,8 +817,7 @@ app.get('/api/admin/ai-agents', (req, res) => {
       key,
       name: config.name || key,
       command: config.command || key,
-      fallbackPath: config.fallbackPath || '',
-      isPreset: !key.startsWith('custom_')
+      fallbackPath: config.fallbackPath || ''
     }));
     res.json({ success: true, data: agentsList });
   } catch (error) {
@@ -835,8 +834,18 @@ app.post('/api/admin/ai-agents', (req, res) => {
       return res.json({ success: false, error: '名称和命令不能为空' });
     }
 
-    // 生成唯一 key
-    const agentKey = `custom_${Date.now()}`;
+    // 用 name 生成 key，如果重名则加数字后缀
+    let baseKey = name.toLowerCase().replace(/[^a-z0-9_-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    const aiAgents = getAIAgents();
+    let agentKey = baseKey;
+    if (aiAgents[agentKey]) {
+      const lang = req.headers['accept-language'] || '';
+      const isZh = lang.includes('zh');
+      return res.json({
+        success: false,
+        error: isZh ? `Agent "${name}" 已存在（key: ${agentKey}），请使用编辑功能` : `Agent "${name}" already exists (key: ${agentKey}), use edit instead`
+      });
+    }
 
     const result = addAIAgent(agentKey, {
       name,

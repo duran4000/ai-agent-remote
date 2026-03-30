@@ -151,8 +151,6 @@ class AdminApp {
 
   renderAgents() {
     const lang = getCurrentLang();
-    const builtinText = lang === 'zh' ? '内置' : 'Built-in';
-    const customText = lang === 'zh' ? '自定义' : 'Custom';
     const editText = lang === 'zh' ? '编辑' : 'Edit';
     const deleteText = lang === 'zh' ? '删除' : 'Delete';
 
@@ -160,11 +158,10 @@ class AdminApp {
       <div class="agent-item" data-key="${agent.key}">
         <div class="agent-name">
           ${agent.name}
-          <span class="agent-badge ${agent.isPreset ? 'preset' : 'custom'}">${agent.isPreset ? builtinText : customText}</span>
         </div>
         <div class="agent-actions">
           <button class="edit-btn" data-key="${agent.key}">${editText}</button>
-          ${!agent.isPreset ? `<button class="delete-btn" data-key="${agent.key}" data-name="${agent.name}">${deleteText}</button>` : ''}
+          <button class="delete-btn" data-key="${agent.key}" data-name="${agent.name}">${deleteText}</button>
         </div>
       </div>
     `).join('');
@@ -189,6 +186,7 @@ class AdminApp {
     this.editingKey = null;
     this.modalTitle.textContent = t('admin.modal.add');
     this.agentNameInput.value = '';
+    this.agentNameInput.disabled = false;
     this.agentCommandInput.value = '';
     this.agentPathInput.value = '';
     this.modal.classList.remove('hidden');
@@ -199,10 +197,11 @@ class AdminApp {
     this.editingKey = agent.key;
     this.modalTitle.textContent = t('admin.modal.edit');
     this.agentNameInput.value = agent.name;
+    this.agentNameInput.disabled = true;
     this.agentCommandInput.value = agent.command;
     this.agentPathInput.value = agent.fallbackPath || '';
     this.modal.classList.remove('hidden');
-    this.agentNameInput.focus();
+    this.agentCommandInput.focus();
   }
 
   closeModal() {
@@ -219,6 +218,18 @@ class AdminApp {
       const lang = getCurrentLang();
       this.showToast(lang === 'zh' ? '名称和命令不能为空' : 'Name and command are required', 'error');
       return;
+    }
+
+    // 前端校验 key 重复（与后端生成规则一致）
+    if (!this.editingKey) {
+      const baseKey = name.toLowerCase().replace(/[^a-z0-9_-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+      if (baseKey && this.agents.some(a => a.key === baseKey)) {
+        const lang = getCurrentLang();
+        this.showToast(lang === 'zh'
+          ? `Agent "${name}" 已存在（key: ${baseKey}），请使用编辑功能`
+          : `Agent "${name}" already exists (key: ${baseKey}), use edit instead`, 'error');
+        return;
+      }
     }
 
     const agentData = { name, command, fallbackPath };
