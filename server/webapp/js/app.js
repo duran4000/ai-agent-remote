@@ -714,7 +714,7 @@ class App {
     const serverUrl = this.elements.serverUrl.value.trim() || window.location.origin.replace(/^http/, 'ws');
     const token = this.elements.authToken.value.trim();
     const aiAgent = this.elements.aiAgent.value;
-    const workDir = this.elements.workDir.value.trim().replace(/\\/g, '/').toLowerCase();
+    const workDir = this.elements.workDir.value.trim().replace(/\\/g, '/');
     const createNewTab = this.elements.newTabCheckbox.checked;
 
     if (!token) {
@@ -1113,7 +1113,7 @@ class App {
       const sessionKey = data.sessionId;
       if (data.status === STATUS.DISCONNECTED) {
         for (const [tabId, connection] of this.tabConnections.entries()) {
-          const connectionSessionKey = `${connection.aiAgent}:${connection.workDir.toLowerCase()}`;
+          const connectionSessionKey = `${connection.aiAgent}:${connection.workDir}`;
           if (connectionSessionKey === sessionKey) {
             connection.isConnected = false;
             this.tabConnections.set(tabId, connection);
@@ -1505,16 +1505,11 @@ class App {
       lockBtn.className = `tab-lock ${isLocked ? 'locked' : 'unlocked'}`;
       if (isLocked) {
         lockBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>';
-        lockBtn.title = '点击解锁后可关闭';
+        lockBtn.title = '双击标签页切换锁定';
       } else {
         lockBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h1.9c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10z"/></svg>';
-        lockBtn.title = '已解锁，可关闭';
+        lockBtn.title = '双击标签页切换锁定';
       }
-      lockBtn.onclick = (e) => {
-        e.stopPropagation();
-        this.toggleTabLock(tab.id);
-      };
-
       const closeBtn = document.createElement('span');
       closeBtn.className = 'tab-close';
       closeBtn.innerHTML = '&times;';
@@ -1527,6 +1522,10 @@ class App {
       tabBtn.appendChild(label);
       tabBtn.appendChild(closeBtn);
       tabBtn.onclick = () => this.switchTab(tab.id);
+      tabBtn.ondblclick = (e) => {
+        e.preventDefault();
+        this.toggleTabLock(tab.id);
+      };
 
       // 添加拖拽排序事件
       this.setupTabDrag(tabBtn, tab.id);

@@ -60,7 +60,7 @@ export class WebSocketManager {
         
         const savedDeviceId = localStorage.getItem('claude-remote-deviceId');
         
-        const normalizedWorkDir = workDir.replace(/\\/g, '/').toLowerCase();
+        const normalizedWorkDir = workDir.replace(/\\/g, '/');
         const sessionKey = `${aiAgent}:${normalizedWorkDir}`;
         const sessionId = sessionKey;
         
