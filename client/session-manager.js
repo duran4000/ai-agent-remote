@@ -316,7 +316,7 @@ class SessionManager {
 
     const workDir = !clientWorkDir
       ? process.cwd()
-      : clientWorkDir.replace(/\\/g, '/').toLowerCase();
+      : (fs.existsSync(clientWorkDir.replace(/\\/g, '/')) ? clientWorkDir.replace(/\\/g, '/') : process.cwd());
     
     loadConfig(true);
     const pathConfig = getAIModelPath(aiAgent, sessionId.toLowerCase(), true);
@@ -624,7 +624,6 @@ class SessionManager {
     } else {
       // Linux/Mac: 使用node执行wrapper.js
       spawnArgs = [
-        'node',
         wrapperPath,
         '--server', this.config.serverUrl,
         '--token', this.config.token,
@@ -649,7 +648,7 @@ class SessionManager {
       };
     }
 
-    const spawnExe = isWindows ? 'cmd.exe' : 'node';
+    const spawnExe = isWindows ? 'cmd.exe' : process.execPath;
     const wrapper = spawn(spawnExe, spawnArgs, spawnOptions);
     
     const session = {

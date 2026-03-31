@@ -352,6 +352,11 @@ class ClaudePtyWrapper {
             spawnArgs = ['/c', cmd, ...ptyArgs];
           }
         }
+      } else {
+        // Linux/Mac: 拆分命令和参数，避免把整个字符串当可执行文件名
+        const parts = cmd.split(/\s+/);
+        spawnCommand = parts[0];
+        spawnArgs = [...parts.slice(1), ...ptyArgs];
       }
       
       log(`Final spawnCommand: "${spawnCommand}", spawnArgs: ${JSON.stringify(spawnArgs)}`);
