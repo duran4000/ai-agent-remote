@@ -319,7 +319,7 @@ class SessionManager {
       : (fs.existsSync(clientWorkDir.replace(/\\/g, '/')) ? clientWorkDir.replace(/\\/g, '/') : process.cwd());
     
     loadConfig(true);
-    const pathConfig = getAIModelPath(aiAgent, sessionId.toLowerCase(), true);
+    const pathConfig = getAIModelPath(aiAgent, sessionId, true);
     const claudePath = pathConfig.command;
     const fallbackPath = pathConfig.fallbackPath;
 
@@ -329,7 +329,7 @@ class SessionManager {
     log(`  Command: ${claudePath}`);
     log(`  Fallback path: ${fallbackPath || 'none'}`);
 
-    const existingWrapper = this.checkExistingWrapper(sessionId.toLowerCase(), aiAgent);
+    const existingWrapper = this.checkExistingWrapper(sessionId, aiAgent);
     if (existingWrapper) {
       log(`[${sessionKey}] Existing wrapper process detected: PID=${existingWrapper.pid}, aiAgent=${existingWrapper.aiAgent || 'unknown'}`);
     } else {
@@ -499,7 +499,7 @@ class SessionManager {
   }
 
   cleanupPtyProcesses(sessionId, aiAgent = 'claude') {
-    const normalizedSessionId = sessionId.replace(/\\/g, '/').toLowerCase();
+    const normalizedSessionId = sessionId.replace(/\\/g, '/');
 
     try {
       if (process.platform === 'win32') {
@@ -530,7 +530,7 @@ class SessionManager {
   }
 
   startWrapper(sessionId, workDir, claudePath, fallbackPath, aiAgent = 'claude') {
-    const normalizedSessionId = sessionId.replace(/\\/g, '/').toLowerCase();
+    const normalizedSessionId = sessionId.replace(/\\/g, '/');
     const sessionKey = `${aiAgent}-${normalizedSessionId}`;
     const wrapperPath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'ai-agent-pty-wrapper.js');
     
