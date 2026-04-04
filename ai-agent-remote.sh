@@ -4,6 +4,11 @@
 
 set -euo pipefail
 
+# Source nvm if available (non-interactive SSH shells don't load .bashrc)
+for _nvm_dir in "$HOME/.nvm" "$HOME/.config/nvm" "${NVM_DIR:-}"; do
+    [ -s "$_nvm_dir/nvm.sh" ] && . "$_nvm_dir/nvm.sh" && break
+done
+
 ACTION="${1:-restart}"
 ENV="${2:-prod}"
 
