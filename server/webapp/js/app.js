@@ -513,8 +513,18 @@ class App {
         e.stopPropagation();
 
         this.handleQuickAction(btn.dataset.action);
+
+        // 方向键长按连续触发
+        const action = btn.dataset.action;
+        if (['up', 'down', 'left', 'right'].includes(action)) {
+          this._startRepeat(action, btn);
+        }
       }
     });
+
+    this.elements.quickActions.addEventListener('pointerup', () => this._stopRepeat());
+    this.elements.quickActions.addEventListener('pointerleave', () => this._stopRepeat());
+    this.elements.quickActions.addEventListener('pointercancel', () => this._stopRepeat());
 
     // 语言切换按钮
     const langSwitch = document.getElementById('lang-switch');
@@ -844,6 +854,7 @@ class App {
       
       this.updateConnectionUI(true);
       this.terminal.setConnected(true);
+      this.terminal.focus();
       this.elements.inputArea.classList.add('hidden-input');
 
       this.saveWorkDirHistory(workDir);
@@ -969,6 +980,35 @@ class App {
     }
   }
 
+  _startRepeat(action, btn) {
+    this._stopRepeat();
+    this._repeatAction = action;
+    this._repeatBtn = btn;
+    this._repeatCount = 0;
+    let delay = 50;
+    const tick = () => {
+      if (!this._repeatAction) return;
+      this._repeatCount++;
+      this.handleQuickAction(this._repeatAction);
+      delay = this._repeatCount < 5 ? 40 : Math.max(10, delay * 0.85);
+      this._repeatTimer = setTimeout(tick, delay);
+    };
+    this._repeatTimer = setTimeout(tick, delay);
+  }
+
+  _stopRepeat() {
+    if (this._repeatTimer) {
+      clearTimeout(this._repeatTimer);
+      this._repeatTimer = null;
+    }
+    if (this._repeatBtn) {
+      this._repeatBtn.classList.remove('repeating');
+    }
+    this._repeatAction = null;
+    this._repeatBtn = null;
+    this._repeatCount = 0;
+  }
+
   handleQuickAction(action) {
     if (!this.wsManager) {
       this.terminal.write('未连接到服务器', 'error');
@@ -1058,6 +1098,9 @@ class App {
       case 'slash':
         this.wsManager.sendCommand('/', size.cols, size.rows);
         break;
+      case 'hash':
+        this.wsManager.sendCommand('#', size.cols, size.rows);
+        break;
       case 'at':
         this.wsManager.sendCommand('@', size.cols, size.rows);
         break;
@@ -1098,8 +1141,11 @@ class App {
         this.toggleTerminalSearch();
         break;
     }
-    
-    this.elements.quickActions.classList.remove('expanded');
+
+    // 方向键不收起面板，其他键收起
+    if (!['up', 'down', 'left', 'right', 'toggle-shortcuts'].includes(action)) {
+      this.elements.quickActions.classList.remove('expanded');
+    }
   }
 
   handleStatus(data) {
@@ -1801,6 +1847,7 @@ class App {
       const size = this.terminal.getSize();
       console.log(`[App] SwitchTab: sending resize ${size.cols}x${size.rows}`);
       connection.wsManager.sendResize(size.cols, size.rows);
+      this.terminal.focus();
     } else {
       this.updateConnectionUI(false);
     }
@@ -1930,6 +1977,10 @@ class App {
     const isConnected = connection && connection.isConnected;
     if (!isConnected) {
       this.elements.terminalOverlay.classList.add('disconnected');
+    }
+    // 恢复终端焦点，确保可滚动
+    if (this.terminal) {
+      this.terminal.focus();
     }
   }
 

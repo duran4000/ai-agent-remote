@@ -336,14 +336,43 @@
   gap: 2px;
 }
 
-#quick-actions .action-group.frequently-used.num-group .action-btn {
-  min-width: 33px !important;
-  padding: 4px 8px !important;
+#quick-actions .action-group.frequently-used.primary-row {
+  flex: 1 0 100%;
+  align-items: center;
 }
 
-#quick-actions .action-group.frequently-used.right-group {
-  margin-left: auto;
-  gap: 2px;
+#quick-actions .action-group.frequently-used.secondary-row {
+  flex: 0 0 auto;
+}
+
+#quick-actions .action-group.frequently-used.secondary-row .action-btn:not([data-action="toggle-shortcuts"]) {
+  min-width: 40px !important;
+  padding: 4px 16px !important;
+}
+
+#quick-actions .action-group.frequently-used.primary-row .right-separator {
+  flex: 1 1 0;
+  min-width: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  background: none !important;
+  height: 0 !important;
+}
+
+#quick-actions .action-group.frequently-used.primary-row .action-btn-wide {
+  min-width: 44px !important;
+  max-width: 44px !important;
+  padding: 4px 4px !important;
+  font-size: 10px !important;
+  overflow: hidden;
+}
+
+#quick-actions .action-group.frequently-used.primary-row .action-btn.arrow:not(.arrow-h),
+#quick-actions .action-group.frequently-used.primary-row #font-size-btn,
+#quick-actions .action-group.frequently-used.primary-row .action-btn[data-action="num-1"],
+#quick-actions .action-group.frequently-used.primary-row .action-btn[data-action="num-2"] {
+  min-width: 33px !important;
+  padding: 4px 8px !important;
 }
 
 #quick-actions .action-group.frequently-used .action-btn {
@@ -356,6 +385,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+#quick-actions .action-group.frequently-used.primary-row .action-btn.arrow.arrow-h {
+  padding: 4px 16px !important;
+  min-width: 40px !important;
 }
 
 #quick-actions.expanded .action-group {

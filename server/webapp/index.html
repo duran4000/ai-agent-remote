@@ -82,26 +82,25 @@
         <input type="text" id="command-input" data-i18n="terminal.placeholder" placeholder="输入命令..." autocomplete="off" autocapitalize="off" disabled>
       </div>
       <div id="quick-actions">
-        <div class="action-group frequently-used">
-          <span class="action-btn" data-action="esc" data-i18n-title="btn.esc" title="退出/取消">ESC</span>
-          <span class="action-btn" data-action="toggle-shortcuts" data-i18n-title="btn.more" title="展开更多">⌨️</span>
-        </div>
-        <div class="action-group frequently-used num-group">
+        <div class="action-group frequently-used primary-row">
+          <span class="action-btn action-btn-sm" data-action="esc" data-i18n-title="btn.esc" title="退出/取消">ESC</span>
           <span class="action-btn" data-action="num-1">1</span>
           <span class="action-btn" data-action="num-2">2</span>
-        </div>
-        <div class="action-group frequently-used">
-          <span class="action-btn" data-action="num-3">3</span>
-          <span class="action-btn" data-action="num-4">4</span>
           <span class="action-btn arrow" data-action="up" data-i18n-title="btn.prevCmd" title="上一条命令">↑</span>
           <span class="action-btn arrow" data-action="down" data-i18n-title="btn.nextCmd" title="下一条命令">↓</span>
-          <span class="action-btn arrow" data-action="left" data-i18n-title="btn.left" title="左移">←</span>
-          <span class="action-btn arrow" data-action="right" data-i18n-title="btn.right" title="右移">→</span>
-          <span class="action-btn" id="font-size-btn" data-i18n-title="btn.fontSize" title="调整字体">Aa</span>
+          <span class="action-btn arrow arrow-h" data-action="left" data-i18n-title="btn.left" title="左移">←</span>
+          <span class="action-btn arrow arrow-h" data-action="right" data-i18n-title="btn.right" title="右移">→</span>
+          <span class="action-btn right-separator"></span>
+          <span class="action-btn action-btn-wide" data-action="backspace" data-i18n-title="btn.backspace" title="退格">⌫</span>
+          <span class="action-btn action-btn-wide" data-action="enter" data-i18n-title="btn.enter" title="回车">Enter</span>
         </div>
-        <div class="action-group frequently-used right-group">
-          <span class="action-btn" data-action="backspace" data-i18n-title="btn.backspace" title="退格">⌫</span>
-          <span class="action-btn" data-action="enter" data-i18n-title="btn.enter" title="回车">Enter</span>
+        <div class="action-group frequently-used secondary-row">
+          <span class="action-btn" id="font-size-btn" data-i18n-title="btn.fontSize" title="调整字体">Aa</span>
+          <span class="action-btn action-btn-sm" data-action="toggle-shortcuts" data-i18n-title="btn.more" title="展开更多">⌨️</span>
+          <span class="action-btn" data-action="slash" data-i18n-title="btn.command" title="命令">/</span>
+          <span class="action-btn" data-action="hash" data-i18n-title="btn.hash" title="注释">#</span>
+          <span class="action-btn" data-action="at" data-i18n-title="btn.filePath" title="文件路径">@</span>
+          <span class="action-btn" data-action="bash-mode" data-i18n-title="btn.bashMode" title="Bash模式">!</span>
         </div>
         <div class="action-group">
           <span class="action-btn" data-action="clear-screen" data-i18n="btn.clear" title="清屏">清屏</span>
@@ -137,6 +136,8 @@
           <span class="action-btn" data-action="ampersand" data-i18n-title="btn.background" title="后台">&</span>
         </div>
         <div class="action-group numbers">
+          <span class="action-btn" data-action="num-3">3</span>
+          <span class="action-btn" data-action="num-4">4</span>
           <span class="action-btn" data-action="num-5">5</span>
           <span class="action-btn" data-action="num-6">6</span>
           <span class="action-btn" data-action="num-7">7</span>

@@ -64,6 +64,7 @@ export class Terminal {
     // so we intercept touch events before xterm and add momentum after touchend
     this._setupInertiaScroll();
 
+
     // 使用 xterm 的 onScroll API 监听滚动
     this.term.onScroll(() => {
       const buffer = this.term._core?.buffer;
@@ -222,14 +223,13 @@ export class Terminal {
   }
 
   fixHelperTextareaPosition(container) {
-    // 使用更强的选择器找到并隐藏光标轮廓
+    // 只视觉隐藏光标轮廓，保留布局以便读取位置
     const xtermScreen = container.querySelector('.xterm-screen');
     if (xtermScreen) {
       const cursorOutlines = xtermScreen.querySelectorAll('.xterm-cursor-outline');
       cursorOutlines.forEach(el => {
-        el.style.display = 'none';
-        el.style.visibility = 'hidden';
         el.style.opacity = '0';
+        el.style.pointerEvents = 'none';
       });
     }
   }
