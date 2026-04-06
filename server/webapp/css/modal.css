@@ -352,3 +352,9 @@
   background-position: center;
   background-repeat: no-repeat;
 }
+
+/* ====== 表单分隔线 ====== */
+.form-divider {
+  border-top: 1px solid var(--border);
+  margin: 16px 0;
+}

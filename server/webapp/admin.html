@@ -85,6 +85,22 @@
           <label data-i18n="admin.session.timeout">会话超时 (毫秒)</label>
           <input type="number" id="session-timeout" readonly>
         </div>
+        <div class="form-divider"></div>
+        <div class="form-group inline-group overlay-mode-group">
+          <label data-i18n="settings.overlayMode">蒙版激活</label>
+          <label class="radio-label">
+            <input type="radio" name="overlay-click-mode" value="dblclick" checked>
+            <span data-i18n="settings.doubleClick">双击</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="overlay-click-mode" value="click">
+            <span data-i18n="settings.singleClick">单击</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="overlay-click-mode" value="longpress">
+            <span data-i18n="settings.longPress">长按</span>
+          </label>
+        </div>
         <p class="form-hint" data-i18n="admin.session.hint">会话配置需在 config.json 中修改</p>
       </div>
     </div>

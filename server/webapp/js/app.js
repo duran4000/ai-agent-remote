@@ -561,24 +561,16 @@ class App {
 
     // Setup overlay click listener based on settings
     this.setupOverlayClickListener();
-
-    // Listen for overlay click mode changes
-    document.querySelectorAll('input[name="overlay-click-mode"]').forEach(radio => {
-      radio.addEventListener('change', (e) => {
-        this.settings.overlayClickMode = e.target.value;
-        this.setupOverlayClickListener();
-        this.saveSettings();
-      });
-    });
   }
 
   setupOverlayClickListener() {
     const overlay = this.elements.terminalOverlay;
     const eventType = this.settings.overlayClickMode || 'dblclick';
 
-    // Remove existing listener
+    // Remove existing listeners
     overlay.removeEventListener('click', this._overlayClickHandler);
     overlay.removeEventListener('dblclick', this._overlayClickHandler);
+    this._removeLongPressListeners();
 
     // Create handler if not exists
     if (!this._overlayClickHandler) {
@@ -609,8 +601,104 @@ class App {
       };
     }
 
-    // Add listener with correct event type
-    overlay.addEventListener(eventType, this._overlayClickHandler);
+    if (eventType === 'longpress') {
+      this._setupLongPress(overlay);
+    } else {
+      overlay.addEventListener(eventType, this._overlayClickHandler);
+    }
+  }
+
+  _setupLongPress(overlay) {
+    const LONG_PRESS_DURATION = 500;
+    let timer = null;
+    let triggered = false;
+    let startX = 0, startY = 0;
+    let isTouching = false;
+
+    const clearTimer = () => {
+      if (timer) { clearTimeout(timer); timer = null; }
+    };
+
+    const trigger = (e) => {
+      if (triggered) return;
+      triggered = true;
+      clearTimer();
+      this._overlayClickHandler(e);
+    };
+
+    const onCancel = () => {
+      clearTimer();
+      triggered = false;
+    };
+
+    this._longPressStart = (e) => {
+      const unlockCircle = e.target.closest('.unlock-circle');
+      if (!unlockCircle) return;
+
+      // Prevent duplicate start on touch devices (touchstart + mousedown)
+      if (e.type === 'touchstart') {
+        isTouching = true;
+      } else if (isTouching) {
+        return; // Skip mousedown if already tracking touch
+      }
+
+      clearTimer();
+      triggered = false;
+
+      const point = e.touches ? e.touches[0] : e;
+      startX = point.clientX;
+      startY = point.clientY;
+
+      timer = setTimeout(() => {
+        trigger(e);
+      }, LONG_PRESS_DURATION);
+    };
+
+    this._longPressMove = (e) => {
+      if (!timer) return;
+      const point = e.touches ? e.touches[0] : e;
+      if (Math.abs(point.clientX - startX) > 10 || Math.abs(point.clientY - startY) > 10) {
+        onCancel();
+      }
+    };
+
+    this._longPressEnd = (e) => {
+      if (e.type === 'touchend') {
+        isTouching = false;
+      }
+      onCancel();
+    };
+
+    this._longPressContextMenu = (e) => {
+      const unlockCircle = e.target.closest('.unlock-circle');
+      if (unlockCircle) e.preventDefault();
+    };
+
+    overlay.addEventListener('touchstart', this._longPressStart, { passive: true });
+    overlay.addEventListener('touchmove', this._longPressMove, { passive: true });
+    overlay.addEventListener('touchend', this._longPressEnd);
+    overlay.addEventListener('mousedown', this._longPressStart);
+    overlay.addEventListener('mousemove', this._longPressMove);
+    overlay.addEventListener('mouseup', this._longPressEnd);
+    overlay.addEventListener('contextmenu', this._longPressContextMenu);
+  }
+
+  _removeLongPressListeners() {
+    const overlay = this.elements.terminalOverlay;
+    if (!this._longPressStart) return;
+
+    overlay.removeEventListener('touchstart', this._longPressStart);
+    overlay.removeEventListener('touchmove', this._longPressMove);
+    overlay.removeEventListener('touchend', this._longPressEnd);
+    overlay.removeEventListener('mousedown', this._longPressStart);
+    overlay.removeEventListener('mousemove', this._longPressMove);
+    overlay.removeEventListener('mouseup', this._longPressEnd);
+    overlay.removeEventListener('contextmenu', this._longPressContextMenu);
+
+    this._longPressStart = null;
+    this._longPressMove = null;
+    this._longPressEnd = null;
+    this._longPressContextMenu = null;
   }
 
   lockCurrentTab() {
@@ -2038,13 +2126,12 @@ class App {
   }
 
   saveSettings() {
-    const overlayMode = document.querySelector('input[name="overlay-click-mode"]:checked');
     this.settings = {
       serverUrl: this.elements.serverUrl.value.trim(),
       token: this.elements.authToken.value.trim(),
       workDir: this.elements.workDir.value.trim(),
       aiAgent: this.elements.aiAgent.value,
-      overlayClickMode: overlayMode ? overlayMode.value : 'dblclick'
+      overlayClickMode: this.settings.overlayClickMode || 'dblclick'
     };
     localStorage.setItem('claude-remote-settings', JSON.stringify(this.settings));
   }
@@ -2058,9 +2145,7 @@ class App {
     this.selectAIAgent(aiAgentKey);
 
     // Load overlay click mode
-    const overlayMode = this.settings.overlayClickMode || 'dblclick';
-    const radioBtn = document.querySelector(`input[name="overlay-click-mode"][value="${overlayMode}"]`);
-    if (radioBtn) radioBtn.checked = true;
+    this.setupOverlayClickListener();
   }
 
   loadWorkDirHistory() {

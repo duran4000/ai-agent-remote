@@ -59,6 +59,8 @@ const i18n = {
 
     // 设置模态框
     'settings.title': '设置',
+    'settings.tabConnection': '连接',
+    'settings.tabSession': '会话',
     'settings.serverUrl': '服务器地址',
     'settings.authToken': '认证Token',
     'settings.authTokenPlaceholder': '输入Token',
@@ -69,6 +71,7 @@ const i18n = {
     'settings.overlayMode': '蒙版激活',
     'settings.doubleClick': '双击',
     'settings.singleClick': '单击',
+    'settings.longPress': '长按',
     'settings.connect': '连接',
     'settings.disconnect': '断开连接',
 
@@ -178,6 +181,8 @@ const i18n = {
 
     // Settings Modal
     'settings.title': 'Settings',
+    'settings.tabConnection': 'Connection',
+    'settings.tabSession': 'Session',
     'settings.serverUrl': 'Server URL',
     'settings.authToken': 'Auth Token',
     'settings.authTokenPlaceholder': 'Enter Token',
@@ -188,6 +193,7 @@ const i18n = {
     'settings.overlayMode': 'Overlay Mode',
     'settings.doubleClick': 'Double Click',
     'settings.singleClick': 'Single Click',
+    'settings.longPress': 'Long Press',
     'settings.connect': 'Connect',
     'settings.disconnect': 'Disconnect',
 

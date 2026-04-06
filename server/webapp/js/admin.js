@@ -61,6 +61,7 @@ class AdminApp {
     this.sessionTimeout = document.getElementById('session-timeout');
     this.toast = document.getElementById('toast');
     this.langSwitch = document.getElementById('lang-switch');
+    this.overlayModeRadios = document.querySelectorAll('input[name="overlay-click-mode"]');
   }
 
   bindEvents() {
@@ -90,6 +91,17 @@ class AdminApp {
     if (this.langSwitch) {
       this.langSwitch.addEventListener('click', () => this.toggleLanguage());
     }
+
+    // Overlay click mode
+    this.overlayModeRadios.forEach(radio => {
+      radio.addEventListener('change', () => {
+        const saved = localStorage.getItem('claude-remote-settings');
+        const settings = saved ? JSON.parse(saved) : {};
+        settings.overlayClickMode = document.querySelector('input[name="overlay-click-mode"]:checked').value;
+        localStorage.setItem('claude-remote-settings', JSON.stringify(settings));
+        this.showToast(getCurrentLang() === 'zh' ? '蒙版激活模式已保存' : 'Overlay mode saved', 'success');
+      });
+    });
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !this.modal.classList.contains('hidden')) {
@@ -134,6 +146,13 @@ class AdminApp {
     if (!this.config) return;
     this.maxHistory.value = this.config.session?.maxHistory || '';
     this.sessionTimeout.value = this.config.session?.timeout || '';
+
+    // Load overlay click mode from localStorage
+    const saved = localStorage.getItem('claude-remote-settings');
+    const settings = saved ? JSON.parse(saved) : {};
+    const overlayMode = settings.overlayClickMode || 'dblclick';
+    const radio = document.querySelector(`input[name="overlay-click-mode"][value="${overlayMode}"]`);
+    if (radio) radio.checked = true;
   }
 
   async loadAgents() {
