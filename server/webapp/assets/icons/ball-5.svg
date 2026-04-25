@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <radialGradient id="sphere3D" cx="30%" cy="25%" r="70%">
+      <stop offset="0%" stop-color="#FFAA66"/>
+      <stop offset="20%" stop-color="#FF6600"/>
+      <stop offset="50%" stop-color="#CC5200"/>
+      <stop offset="80%" stop-color="#993D00"/>
+      <stop offset="100%" stop-color="#662900"/>
+    </radialGradient>
+  </defs>
+
+  <circle cx="50" cy="50" r="46" fill="url(#sphere3D)"/>
+  <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(0,0,0,0.2)" stroke-width="1"/>
+  <ellipse cx="32" cy="28" rx="14" ry="10" fill="rgba(255,255,255,0.75)"/>
+  <ellipse cx="36" cy="32" rx="5" ry="3" fill="rgba(255,255,255,0.4)"/>
+  <ellipse cx="50" cy="78" rx="25" ry="8" fill="rgba(255,180,130,0.2)"/>
+  <circle cx="50" cy="50" r="42" fill="#f8f8f8"/>
+  <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(0,0,0,0.08)" stroke-width="1"/>
+  <text x="50" y="78" font-family="Arial Black, Arial" font-size="80" font-weight="900" fill="#1a1a1a" text-anchor="middle">5</text>
+</svg>

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <!-- 黑八球3D立体渐变 -->
+    <radialGradient id="sphere3D" cx="30%" cy="25%" r="70%">
+      <stop offset="0%" stop-color="#666666"/>
+      <stop offset="20%" stop-color="#333333"/>
+      <stop offset="50%" stop-color="#1a1a1a"/>
+      <stop offset="80%" stop-color="#0d0d0d"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+  </defs>
+
+  <!-- 球体 - 立体渐变 -->
+  <circle cx="50" cy="50" r="46" fill="url(#sphere3D)"/>
+  
+  <!-- 球体边缘 -->
+  <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+
+  <!-- 强高光 - 左上角 -->
+  <ellipse cx="32" cy="28" rx="14" ry="10" fill="rgba(255,255,255,0.6)"/>
+  <!-- 次高光 -->
+  <ellipse cx="36" cy="32" rx="5" ry="3" fill="rgba(255,255,255,0.3)"/>
+  
+  <!-- 底部微反光 -->
+  <ellipse cx="50" cy="78" rx="25" ry="8" fill="rgba(100,100,100,0.15)"/>
+
+  <!-- 浅灰色圆圈 -->
+  <circle cx="50" cy="50" r="42" fill="#b8b8b8"/>
+  <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(0,0,0,0.12)" stroke-width="1"/>
+
+  <!-- 数字 -->
+  <text x="50" y="78" font-family="Arial Black, Arial" font-size="80" font-weight="900" fill="#000000" text-anchor="middle">8</text>
+</svg>
